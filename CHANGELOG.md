@@ -1,13 +1,7 @@
 # Changelog
 
-## v0.7.5 - internal pre-public review snapshot
 
 ### Changed
-
-- Marked the final internal review snapshot before the planned clean public `v0.8.0` GitHub import.
-- Consolidated About content into the dashboard modal and removed the legacy standalone About page.
-- Refined public About wording around security model and project scope.
-- Kept `v0.8.0` as the planned public release milestone.
 
 ## v0.8.0
 
