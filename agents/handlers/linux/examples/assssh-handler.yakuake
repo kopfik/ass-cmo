@@ -1,0 +1,58 @@
+#!/bin/sh
+set -eu
+
+url="${1:-}"
+target="${url#assssh://}"
+target="${target%%/*}"
+target="${target%%\?*}"
+
+target="$(printf '%s' "$target" | sed 's/%3A/:/Ig; s/%2F/\//Ig; s/%40/@/Ig')"
+
+if [ -z "$target" ] || [ "$target" = "$url" ]; then
+  exit 1
+fi
+
+title="$target"
+
+QDBUS="$(command -v qdbus 2>/dev/null || command -v qdbus6 2>/dev/null || command -v qdbus-qt6 2>/dev/null || command -v qdbus-qt5 2>/dev/null || true)"
+
+if [ -z "$QDBUS" ] && [ -x /usr/lib/qt6/bin/qdbus ]; then
+  QDBUS=/usr/lib/qt6/bin/qdbus
+fi
+
+if [ -z "$QDBUS" ] && [ -x /usr/lib/qt5/bin/qdbus ]; then
+  QDBUS=/usr/lib/qt5/bin/qdbus
+fi
+
+if [ -n "$QDBUS" ] && command -v yakuake >/dev/null 2>&1; then
+  if ! "$QDBUS" org.kde.yakuake >/dev/null 2>&1; then
+    yakuake >/dev/null 2>&1 &
+    sleep 0.7
+  fi
+
+  if "$QDBUS" org.kde.yakuake >/dev/null 2>&1; then
+    session_id="$("$QDBUS" org.kde.yakuake /yakuake/sessions addSession 2>/dev/null || true)"
+
+    if [ -n "$session_id" ]; then
+      terminal_ids="$("$QDBUS" org.kde.yakuake /yakuake/sessions terminalIdsForSessionId "$session_id" 2>/dev/null || true)"
+      terminal_id="$(printf '%s\n' "$terminal_ids" | awk '{print $1}')"
+
+      if [ -n "$terminal_id" ]; then
+        "$QDBUS" org.kde.yakuake /yakuake/tabs setTabTitle "$session_id" "$title" >/dev/null 2>&1 || true
+        "$QDBUS" org.kde.yakuake /yakuake/sessions raiseSession "$session_id" >/dev/null 2>&1 || true
+        "$QDBUS" org.kde.yakuake /yakuake/window toggleWindowState >/dev/null 2>&1 || true
+        "$QDBUS" org.kde.yakuake /yakuake/sessions runCommandInTerminal "$terminal_id" "ssh $target" >/dev/null 2>&1 && exit 0
+      fi
+    fi
+  fi
+fi
+
+if command -v konsole >/dev/null 2>&1; then
+  exec konsole -e ssh "$target"
+fi
+
+if command -v x-terminal-emulator >/dev/null 2>&1; then
+  exec x-terminal-emulator -e ssh "$target"
+fi
+
+exec xterm -e ssh "$target"

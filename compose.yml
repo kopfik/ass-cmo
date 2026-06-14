@@ -1,0 +1,100 @@
+
+name: ass-stack
+
+networks:
+  ass-net:
+    external: true
+    name: ass-net
+
+services:
+  postgres:
+    image: postgres:18
+    container_name: ass-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-inventory_db}
+      POSTGRES_USER: ${POSTGRES_USER:-asscmo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+      - ./config.local/backups:/backups
+    networks:
+      - ass-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-asscmo}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  adminer:
+    image: adminer:5
+    container_name: ass-adminer
+    restart: unless-stopped
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    depends_on:
+      - postgres
+    networks:
+      - ass-net
+
+  php:
+    build: ./docker/php
+    container_name: ass-php
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-inventory_db}
+      POSTGRES_USER: ${POSTGRES_USER:-asscmo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DASHBOARD_USER: ${POSTGRES_DASHBOARD_USER:-ass_dashboarder}
+      POSTGRES_DASHBOARD_PASSWORD: ${POSTGRES_DASHBOARD_PASSWORD:-}
+      ASSCMO_INSTANCE_NAME: ${ASSCMO_INSTANCE_NAME}
+      ASSCMO_INVENTORY_TOKEN: ${ASSCMO_INVENTORY_TOKEN:-}
+      ASSCMO_LEGACY_SHARED_INVENTORY_TOKEN_ENABLED: ${ASSCMO_LEGACY_SHARED_INVENTORY_TOKEN_ENABLED:-false}
+      ASSCMO_ENROLLMENT_PEPPER: ${ASSCMO_ENROLLMENT_PEPPER}
+      ASSCMO_ENROLLMENT_APPROVE_TOKEN: ${ASSCMO_ENROLLMENT_APPROVE_TOKEN}
+      ASSCMO_SITES_FILE: /app/config/sites.json
+      ASSCMO_DASHBOARD_VIEWS_DIR: /app/dashboard-views
+      ASSCMO_DASHBOARD_SSH_USER: ${ASSCMO_DASHBOARD_SSH_USER:-}
+      ASSCMO_ASSWEB_PROTOCOL: ${ASSCMO_ASSWEB_PROTOCOL:-false}
+      ASSCMO_BASE_URL: ${ASSCMO_BASE_URL:-}
+      ASSCMO_ADMINER_URL: ${ASSCMO_ADMINER_URL:-}
+    volumes:
+      - ./app/public:/var/www/html:ro
+      - ./app/includes:/app/includes:ro
+      - ./meta:/app/meta:ro
+      - ./agents:/app/agents:ro
+      - ./config.local/sites.json:/app/config/sites.json:ro
+      - ./config.local/dashboard-views:/app/dashboard-views:ro
+      - ./config.local/branding:/app/branding:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ass-net
+
+  nginx:
+    image: nginx:alpine
+    container_name: ass-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./config.local/nginx:/etc/nginx:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ./app/public:/var/www/html:ro
+      - ./agents:/var/www/agents:ro
+      - ./config.local/branding:/var/www/branding:ro
+      - ./config.local/scripts:/var/www/scripts:ro
+    depends_on:
+      - php
+      - adminer
+    networks:
+      - ass-net
+
+volumes:
+  postgres_data:

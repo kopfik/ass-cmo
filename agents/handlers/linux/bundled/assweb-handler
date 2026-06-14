@@ -1,0 +1,23 @@
+#!/bin/sh
+set -eu
+
+uri="${1:-}"
+target="${uri#assweb://}"
+target="${target%%\?*}"
+
+if command -v python3 >/dev/null 2>&1; then
+  target="$(python3 -c 'import sys, urllib.parse; print(urllib.parse.unquote(sys.argv[1]), end="")' "$target")"
+else
+  target="$(printf '%s' "$target" | sed 's/%3A/:/Ig; s/%2F/\//Ig; s/%3F/?/Ig; s/%26/\&/Ig; s/%3D/=/Ig; s/%40/@/Ig; s/%23/#/Ig; s/%25/%/Ig')"
+fi
+
+case "$target" in
+  http://*|https://*) ;;
+  *) exit 1 ;;
+esac
+
+if command -v xdg-open >/dev/null 2>&1; then
+  exec xdg-open "$target"
+fi
+
+exit 1

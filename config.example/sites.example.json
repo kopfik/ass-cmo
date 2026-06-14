@@ -1,0 +1,11 @@
+[
+  {
+    "site_id": "example-office",
+    "location": "office",
+    "display_name": "Example Office",
+    "environment": "office",
+    "network_segment": "internal",
+    "subnets": ["192.168.1."],
+    "tags": ["office"]
+  }
+]

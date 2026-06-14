@@ -1,0 +1,154 @@
+#!/bin/sh
+set -eu
+
+uri="${1:-}"
+target="${uri#assssh://}"
+target="${target%%/*}"
+target="${target%%\?*}"
+
+if command -v python3 >/dev/null 2>&1; then
+  target="$(python3 -c 'import sys, urllib.parse; print(urllib.parse.unquote(sys.argv[1]), end="")' "$target")"
+else
+  target="$(printf '%s' "$target" | sed 's/%3A/:/Ig; s/%2F/\//Ig; s/%40/@/Ig; s/%5B/[/Ig; s/%5D/]/Ig')"
+fi
+
+
+validate_port() {
+  case "$1" in
+    ""|*[!0-9]*)
+      return 1
+      ;;
+  esac
+
+  [ "$1" -ge 1 ] 2>/dev/null || return 1
+  [ "$1" -le 65535 ] 2>/dev/null || return 1
+  return 0
+}
+
+validate_user() {
+  case "$1" in
+    ""|-*|*[!A-Za-z0-9._-]*)
+      return 1
+      ;;
+  esac
+
+  return 0
+}
+
+validate_hostname_target() {
+  case "$1" in
+    ""|-*|*[!A-Za-z0-9._:@-]*|*@*@*|*::*|*:|*@|*..*)
+      return 1
+      ;;
+  esac
+
+  case "$1" in
+    *:*)
+      port="${1##*:}"
+      hostpart="${1%:*}"
+      validate_port "$port" || return 1
+
+      case "$hostpart" in
+        *@*)
+          user="${hostpart%@*}"
+          host="${hostpart#*@}"
+          validate_user "$user" || return 1
+          [ -n "$host" ] || return 1
+          ;;
+        *)
+          [ -n "$hostpart" ] || return 1
+          ;;
+      esac
+      ;;
+    *@*)
+      user="${1%@*}"
+      host="${1#*@}"
+      validate_user "$user" || return 1
+      [ -n "$host" ] || return 1
+      ;;
+  esac
+
+  return 0
+}
+
+validate_ipv6_literal() {
+  addr="$1"
+
+  case "$addr" in
+    ""|*[!A-Fa-f0-9:.]*|*:::*)
+      return 1
+      ;;
+  esac
+
+  case "$addr" in
+    *:*) ;;
+    *) return 1 ;;
+  esac
+
+  return 0
+}
+
+validate_target() {
+  case "$1" in
+    ""|-*|*[[:space:]]*|*[\;\'\"\`\$\\\&\|\<\>\(\)\{\}]*)
+      return 1
+      ;;
+  esac
+
+  case "$1" in
+    *@\[*\]*)
+      user="${1%@*}"
+      rest="${1#*@}"
+      validate_user "$user" || return 1
+      ;;
+    \[*\]*)
+      rest="$1"
+      ;;
+    *)
+      validate_hostname_target "$1"
+      return $?
+      ;;
+  esac
+
+  case "$rest" in
+    \[*\]:*)
+      addr="${rest#\[}"
+      addr="${addr%%\]*}"
+      port="${rest##*:}"
+      validate_ipv6_literal "$addr" || return 1
+      validate_port "$port" || return 1
+      ;;
+    \[*\])
+      addr="${rest#\[}"
+      addr="${addr%\]}"
+      validate_ipv6_literal "$addr" || return 1
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+
+  return 0
+}
+
+if [ -z "$target" ]; then
+  exit 1
+fi
+
+if ! validate_target "$target"; then
+  exit 1
+fi
+
+if command -v konsole >/dev/null 2>&1; then
+  exec konsole -e ssh -- "$target"
+fi
+
+if command -v gnome-terminal >/dev/null 2>&1; then
+  exec gnome-terminal -- ssh -- "$target"
+fi
+
+if command -v x-terminal-emulator >/dev/null 2>&1; then
+  exec x-terminal-emulator -e ssh -- "$target"
+fi
+
+exec xterm -e ssh -- "$target"

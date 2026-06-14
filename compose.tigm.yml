@@ -1,0 +1,62 @@
+# Optional advanced/lab-oriented TIM/TIGM overlay. Harden MQTT auth, exposed ports, and Docker socket monitoring before production use.
+services:
+  influxdb:
+    image: influxdb:2
+    container_name: ass-influxdb
+    restart: unless-stopped
+    ports:
+      - "${INFLUXDB_PORT:-8086}:8086"
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+      - ./config.local/influxdb/config:/etc/influxdb2
+      - ./config.local/backups:/backups
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUXDB_ADMIN_USER:-admin}
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUXDB_ADMIN_PASSWORD}
+      DOCKER_INFLUXDB_INIT_ORG: ${INFLUXDB_ORG}
+      DOCKER_INFLUXDB_INIT_BUCKET: ${INFLUXDB_BUCKET:-metrics}
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUXDB_ADMIN_TOKEN}
+    networks:
+      - ass-net
+
+  mosquitto:
+    image: eclipse-mosquitto:latest
+    container_name: ass-mosquitto
+    restart: unless-stopped
+    ports:
+      - "${MQTT_PORT:-1883}:1883"
+    volumes:
+      - ./config.local/mosquitto/config:/mosquitto/config:ro
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+    networks:
+      - ass-net
+
+  telegraf:
+    image: telegraf:latest
+    container_name: ass-telegraf
+    restart: unless-stopped
+    depends_on:
+      - influxdb
+      - mosquitto
+    user: "0:970"
+    group_add:
+      - "970"
+    volumes:
+      - ./config.local/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc:/host/proc:ro
+    environment:
+      HOST_PROC: /host/proc
+      INFLUX_TOKEN: ${TELEGRAF_INFLUX_TOKEN:-}
+      INFLUX_URL: http://influxdb:8086
+      INFLUX_ORG: ${INFLUXDB_ORG}
+      INFLUX_BUCKET: ${INFLUXDB_BUCKET:-metrics}
+    networks:
+      - ass-net
+
+volumes:
+  influxdb_data:
+  mosquitto_data:
+  mosquitto_log:

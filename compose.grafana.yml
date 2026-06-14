@@ -1,0 +1,28 @@
+# Optional advanced/lab-oriented overlay. Harden authentication and exposure before production use.
+
+services:
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: ass-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+
+      GF_AUTH_LDAP_ENABLED: ${GRAFANA_LDAP_ENABLED:-false}
+      GF_AUTH_LDAP_CONFIG_FILE: /etc/grafana/ldap.toml
+      GF_AUTH_LDAP_ALLOW_SIGN_UP: ${GRAFANA_LDAP_ALLOW_SIGN_UP:-false}
+
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config.local/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./config.local/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./config.local/grafana/ldap.toml:/etc/grafana/ldap.toml:ro
+    depends_on:
+      - postgres
+    networks:
+      - ass-net
+
+volumes:
+  grafana_data:

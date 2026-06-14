@@ -1,0 +1,38 @@
+[[servers]]
+host = "ad.example.com"
+port = 389
+use_ssl = false
+start_tls = false
+
+# Service account used by Grafana to search users.
+bind_dn = "CN=grafana_svc,OU=SERVICE,OU=ACCOUNTS,DC=EXAMPLE,DC=COM"
+bind_password = "change-me"
+
+# Where to search users.
+search_filter = "(sAMAccountName=%s)"
+search_base_dns = ["DC=EXAMPLE,DC=COM"]
+
+[servers.attributes]
+name = "displayName"
+surname = "sn"
+given_name = "givenName"
+member_of = "memberOf"
+email = "mail"
+username = "sAMAccountName"
+
+# Where to search groups.
+group_search_base_dns = ["DC=EXAMPLE,DC=COM"]
+group_search_filter = "(&(objectClass=group)(member=%s))"
+
+[[servers.group_mappings]]
+group_dn = "CN=Grafana Admins,OU=GROUPS,DC=EXAMPLE,DC=COM"
+org_role = "Admin"
+
+[[servers.group_mappings]]
+group_dn = "CN=Grafana Editors,OU=GROUPS,DC=EXAMPLE,DC=COM"
+org_role = "Editor"
+
+[[servers.group_mappings]]
+group_dn = "*"
+org_role = "Viewer"
+

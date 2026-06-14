@@ -1,0 +1,296 @@
+#!/bin/bash
+# --- CENTRÁLNÍ LOGIKA INVENTURY
+
+# --- KONFIGURACE ---
+CONFIG_FILE="/etc/ass-cmo/agent.conf"
+
+if [ -f "$CONFIG_FILE" ]; then
+    # shellcheck disable=SC1090
+    . "$CONFIG_FILE"
+fi
+
+AGENT_VERSION_FILE="${ASSCMO_AGENT_VERSION_FILE:-/usr/share/ass-cmo-agent/VERSION}"
+ASSCMO_AGENT_NAME="${ASSCMO_AGENT_NAME:-linux-shell}"
+ASSCMO_AGENT_VERSION="$(cat "$AGENT_VERSION_FILE" 2>/dev/null | tr -d '\r\n' || true)"
+ASSCMO_AGENT_VERSION="${ASSCMO_AGENT_VERSION:-unknown}"
+ASSCMO_AGENT_CHANNEL="${ASSCMO_AGENT_CHANNEL:-stable}"
+ASSCMO_AGENT_UPDATE_TIME="${ASSCMO_AGENT_UPDATE_TIME:-}"
+
+BASE_URL="${ASSCMO_BASE_URL:-https://ass-cmo.example.com}"
+INV_URL="${BASE_URL}/inventory.php"
+AGENT_SECRET="${ASSCMO_AGENT_SECRET:-}"
+INV_TOKEN="${ASSCMO_INVENTORY_TOKEN:-}"
+
+AUTH_HEADER_NAME=""
+AUTH_HEADER_VALUE=""
+
+if [ -n "$AGENT_SECRET" ]; then
+    AUTH_HEADER_NAME="X-Agent-Secret"
+    AUTH_HEADER_VALUE="$AGENT_SECRET"
+elif [ -n "$INV_TOKEN" ]; then
+    AUTH_HEADER_NAME="X-Inventory-Token"
+    AUTH_HEADER_VALUE="$INV_TOKEN"
+else
+    echo "ERROR: ASSCMO_AGENT_SECRET or ASSCMO_INVENTORY_TOKEN must be set in $CONFIG_FILE" >&2
+    exit 1
+fi
+
+umask 077
+AUTH_CURL_CONFIG="$(mktemp)"
+RESPONSE_BODY="$(mktemp)"
+trap 'rm -f "$AUTH_CURL_CONFIG" "$RESPONSE_BODY"' EXIT
+printf 'header = "%s: %s"\n' "$AUTH_HEADER_NAME" "$AUTH_HEADER_VALUE" > "$AUTH_CURL_CONFIG"
+
+# --- FUNKCE ---
+
+get_dns_json() {
+    {
+        if command -v resolvectl >/dev/null 2>&1; then
+            resolvectl dns 2>/dev/null | grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}|[0-9A-Fa-f:]*:[0-9A-Fa-f:]+'
+        fi
+
+        if command -v nmcli >/dev/null 2>&1; then
+            nmcli dev show 2>/dev/null | awk '/IP4.DNS|IP6.DNS/ {print $2}'
+        fi
+
+        if ls /etc/systemd/network/*.network >/dev/null 2>&1; then
+            awk -F= '/^[[:space:]]*DNS=/ {print $2}' /etc/systemd/network/*.network 2>/dev/null
+        fi
+
+        awk '/^nameserver / {print $2}' /etc/resolv.conf 2>/dev/null
+    } | sed 's/[[:space:]]//g' | grep -E '^([0-9]{1,3}\.){3}[0-9]{1,3}$|:' | sort -u | jq -R . | jq -s -c .
+}
+
+json_array_or_empty() {
+    value="${1:-[]}"
+    if printf '%s' "$value" | jq -e . >/dev/null 2>&1; then
+        printf '%s' "$value"
+    else
+        printf '[]'
+    fi
+}
+
+json_bool_or_false() {
+    case "${1:-}" in
+        true|false) printf '%s' "$1" ;;
+        *) printf 'false' ;;
+    esac
+}
+
+json_int_or_zero() {
+    case "${1:-}" in
+        ''|*[!0-9]*) printf '0' ;;
+        *) printf '%s' "$1" ;;
+    esac
+}
+
+json_number_or_zero() {
+    case "${1:-}" in
+        ''|*[!0-9.]*|.*|*.*.*) printf '0' ;;
+        *) printf '%s' "$1" ;;
+    esac
+}
+
+# --- 2. IDENTIFIKACE (UID & HOSTNAME) ---
+UID_MACHINE=$(cat /etc/machine-id 2>/dev/null || hostname)
+HOSTNAME=$(uname -n | tr '[:upper:]' '[:lower:]' | xargs)
+FQDN=$(hostname -f 2>/dev/null || echo "$HOSTNAME")
+
+# --- 3. SBĚR INVENTARNICH DAT ---
+# Detekce rozhraní a IP adres
+IFACE=$(ip -4 route ls | awk '/default/ {for (i=1; i<NF; i++) if ($i == "dev") {print $(i+1); exit}}')
+IP4=$(ip -4 addr show "$IFACE" | awk '/inet / {sub(/\/.*/, "", $2); print $2; exit}')
+IP6=$(ip -6 -o addr show dev "$IFACE" scope global | awk '{print $4}' | cut -d/ -f1 | head -n1 || echo "")
+
+# Detekce Gateways
+GW4=$(ip -4 route | grep default | awk '{print $3}' | head -n1)
+GW6=$(ip -6 route | grep default | awk '{print $3}' | head -n1)
+
+# DNS servery
+DNS_JSON=$(get_dns_json)
+
+# Pole všech IP adres
+ALL_IP4=$(ip -4 -o addr | awk '{print $4}' | cut -d/ -f1 | sort -u | jq -R . | jq -s -c .)
+ALL_IP6=$(ip -6 -o addr | grep 'scope global' | awk '{print $4}' | cut -d/ -f1 | sort -u | jq -R . | jq -s -c .)
+
+# Otevřené porty
+PORTS=$(ss -tuln | awk 'NR>1 {print $4}' | sed 's/.*://' | sort -un | jq -R . | jq -s -c .)
+
+# --- 4. OPERAČNÍ SYSTÉM & TYPE ---
+OS_NAME=$(grep '^PRETTY_NAME=' /etc/os-release | cut -d '"' -f 2 | xargs)
+
+if command -v pveversion >/dev/null 2>&1; then
+    PVE_FULL=$(pveversion 2>/dev/null | xargs)
+    PVE_VER=$(printf '%s\n' "$PVE_FULL" | awk -F'/' '{print $2}')
+    OS_NAME="Proxmox VE ${PVE_VER:-unknown} (${OS_NAME})"
+
+elif command -v proxmox-backup-manager >/dev/null 2>&1; then
+    PBS_VER=$(proxmox-backup-manager versions 2>/dev/null | awk '/^proxmox-backup-server / {print $2; exit}')
+    OS_NAME="Proxmox Backup Server ${PBS_VER:-unknown} (${OS_NAME})"
+
+elif command -v pmgversion >/dev/null 2>&1; then
+    PMG_FULL=$(pmgversion 2>/dev/null | xargs)
+    PMG_VER=$(printf '%s\n' "$PMG_FULL" | awk -F'/' '{print $2}')
+    OS_NAME="Proxmox Mail Gateway ${PMG_VER:-unknown} (${OS_NAME})"
+
+elif dpkg-query -W -f='${Version}' proxmox-datacenter-manager >/dev/null 2>&1; then
+    PDM_VER=$(dpkg-query -W -f='${Version}' proxmox-datacenter-manager 2>/dev/null | xargs)
+    OS_NAME="Proxmox Datacenter Manager ${PDM_VER:-unknown} (${OS_NAME})"
+
+elif dpkg-query -W -f='${Version}' openmediavault >/dev/null 2>&1; then
+    OMV_VER=$(dpkg-query -W -f='${Version}' openmediavault 2>/dev/null | xargs)
+    OS_NAME="OpenMediaVault ${OMV_VER:-unknown} (${OS_NAME})"
+
+elif [ -f /etc/arch-release ]; then
+    OS_NAME="${OS_NAME:-Arch Linux}"
+fi
+
+VIRT=$(systemd-detect-virt 2>/dev/null | xargs)
+[ "$VIRT" == "none" ] || [ -z "$VIRT" ] && VIRT="physical"
+
+# --- 5. HARDWARE ---
+CPU_MODEL=$(grep -m1 "model name" /proc/cpuinfo | cut -d: -f2 | xargs || echo "Unknown")
+CPU_CORES=$(nproc 2>/dev/null || echo 1)
+CPU_ARCH=$(uname -m)
+RAM_GB=$(LC_NUMERIC=C free -m | awk '/^Mem:/{printf "%.2f", $2/1024}' | tr ',' '.')
+
+# Disk detaily (v GB)
+READ_DISK=$(df -B1 / --output=size,used,avail,pcent | tail -n1)
+D_TOT=$(echo $READ_DISK | awk '{printf "%.2f", $1/1024/1024/1024}' | tr ',' '.')
+D_USED=$(echo $READ_DISK | awk '{printf "%.2f", $2/1024/1024/1024}' | tr ',' '.')
+D_FREE=$(echo $READ_DISK | awk '{printf "%.2f", $3/1024/1024/1024}' | tr ',' '.')
+D_PERC=$(echo $READ_DISK | awk '{print $4}' | tr -d '%')
+
+# --- 6. SLUŽBY ---
+if command -v docker >/dev/null 2>&1; then
+    DOCK_INST="true"
+    DOCK_VER=$(docker -v | awk '{print $3}' | tr -d ',' | xargs)
+else
+    DOCK_INST="false"
+    DOCK_VER="none"
+fi
+
+ADMINS_JSON=$(awk '{print $3}' /root/.ssh/authorized_keys 2>/dev/null | sort -u | jq -R . | jq -s -c . || echo "[]")
+
+# --- 7. ČASY & UPDATY ---
+UPTIME_S=$(cut -d. -f1 /proc/uptime)
+BOOT_TIME=$(date -d "$(uptime -s)" --iso-8601=seconds | xargs)
+REBOOT_REQ="false"
+UPDATES_COUNT=0
+
+if [ -f /etc/arch-release ]; then
+    INST_K=$(pacman -Q linux-lts 2>/dev/null | awk '{print $2}' | cut -d'-' -f1 || pacman -Q linux 2>/dev/null | awk '{print $2}' | cut -d'-' -f1)
+    RUN_K=$(uname -r | cut -d'-' -f1)
+    [[ -n "$INST_K" && "$INST_K" != "$RUN_K" ]] && REBOOT_REQ="true"
+    UPGRADE_TIME=$(date -r /var/lib/pacman/local --iso-8601=seconds)
+    if command -v checkupdates >/dev/null 2>&1; then UPDATES_COUNT=$(checkupdates | wc -l); fi
+
+elif [ -f /etc/debian_version ]; then
+    [ -f /var/run/reboot-required ] && REBOOT_REQ="true"
+    LATEST_K=$(ls -v /boot/vmlinuz-* 2>/dev/null | tail -n 1 | sed 's|.*/vmlinuz-||')
+    [[ -n "$LATEST_K" && "$LATEST_K" != "$(uname -r)" ]] && REBOOT_REQ="true"
+
+    RAW_APT_DATE=$(grep "End-Date:" /var/log/apt/history.log 2>/dev/null | tail -n 1 | cut -d' ' -f2-)
+    UPGRADE_TIME=$([ -n "$RAW_APT_DATE" ] && LC_ALL=C date -d "$RAW_APT_DATE" --iso-8601=seconds || date -r /var/lib/dpkg/status --iso-8601=seconds)
+    UPDATES_COUNT=$(apt-get -s -o Debug::NoLocking=true upgrade 2>/dev/null | awk '/^[0-9]+ upgraded/ {print $1; found=1} END {if (!found) print 0}')
+fi
+
+# --- 8. SESTAVENÍ JSONU (v1.1) ---
+ALL_IP4="$(json_array_or_empty "$ALL_IP4")"
+ALL_IP6="$(json_array_or_empty "$ALL_IP6")"
+DNS_JSON="$(json_array_or_empty "$DNS_JSON")"
+PORTS="$(json_array_or_empty "$PORTS")"
+ADMINS_JSON="$(json_array_or_empty "$ADMINS_JSON")"
+
+REBOOT_REQ="$(json_bool_or_false "$REBOOT_REQ")"
+DOCK_INST="$(json_bool_or_false "$DOCK_INST")"
+
+UPDATES_COUNT="$(json_int_or_zero "$UPDATES_COUNT")"
+CPU_CORES="$(json_int_or_zero "$CPU_CORES")"
+D_PERC="$(json_int_or_zero "$D_PERC")"
+UPTIME_S="$(json_int_or_zero "$UPTIME_S")"
+
+RAM_GB="$(json_number_or_zero "$RAM_GB")"
+D_TOT="$(json_number_or_zero "$D_TOT")"
+D_USED="$(json_number_or_zero "$D_USED")"
+D_FREE="$(json_number_or_zero "$D_FREE")"
+
+if ! JSON_PAYLOAD=$(jq -n \
+  --arg uid "$UID_MACHINE" \
+  --arg hn "$HOSTNAME" \
+  --arg fqdn "$FQDN" \
+  --arg p_iface "$IFACE" \
+  --arg ip4 "$IP4" \
+  --arg gw4 "$GW4" \
+  --arg ip6 "$IP6" \
+  --arg gw6 "$GW6" \
+  --argjson all4 "$ALL_IP4" \
+  --argjson all6 "$ALL_IP6" \
+  --argjson dns "$DNS_JSON" \
+  --argjson ports "$PORTS" \
+  --arg os "$OS_NAME" \
+  --arg ost "$VIRT" \
+  --arg kr "$(uname -r)" \
+  --argjson rb "$REBOOT_REQ" \
+  --argjson upc "$UPDATES_COUNT" \
+  --arg cpum "$CPU_MODEL" \
+  --argjson cores "$CPU_CORES" \
+  --arg arch "$CPU_ARCH" \
+  --argjson ram "$RAM_GB" \
+  --argjson d_tot "$D_TOT" \
+  --argjson d_used "$D_USED" \
+  --argjson d_free "$D_FREE" \
+  --argjson d_perc "$D_PERC" \
+  --argjson dock_i "$DOCK_INST" \
+  --arg dock_v "$DOCK_VER" \
+  --argjson admins "$ADMINS_JSON" \
+  --argjson upt_s "$UPTIME_S" \
+  --arg boot "$BOOT_TIME" \
+  --arg upg "$UPGRADE_TIME" \
+  --arg agent_name "$ASSCMO_AGENT_NAME" \
+  --arg agent_version "$ASSCMO_AGENT_VERSION" \
+  --arg agent_channel "$ASSCMO_AGENT_CHANNEL" \
+  --arg agent_update_time "$ASSCMO_AGENT_UPDATE_TIME" \
+  '{
+    uid: $uid, hostname: $hn, fqdn: $fqdn, 
+    primary_interface: $p_iface, primary_ipv4_addr: $ip4, ipv4_gateway: $gw4, 
+    primary_ipv6_addr: $ip6, ipv6_gateway: $gw6,
+    all_ipv4_addr: $all4, all_ipv6_addr: $all6,
+    dns_servers: $dns,
+    listening_ports: $ports, os_name: $os, os_type: $ost, kernel_version: $kr,
+    reboot_required: $rb, pending_updates_count: $upc, 
+    cpu_model: $cpum, cpu_cores: $cores, cpu_architecture: $arch, ram_gb: $ram,
+    disk_total_gb: $d_tot, disk_used_gb: $d_used, disk_free_gb: $d_free, disk_usage_percent: $d_perc,
+    docker_installed: $dock_i, docker_version: $dock_v, admin_access: $admins,
+    uptime_seconds: $upt_s, system_boot_time: $boot, system_upgrade_time: $upg,
+    agent_name: $agent_name, agent_version: $agent_version, agent_channel: $agent_channel, agent_update_time: $agent_update_time
+  }'); then
+    echo "ERROR: failed to build JSON payload" >&2
+    exit 1
+fi
+
+# --- 9. ODESLÁNÍ ---
+HTTP_CODE=$(curl -s -o "$RESPONSE_BODY" -w '%{http_code}' -X POST \
+     --config "$AUTH_CURL_CONFIG" \
+     -H "Content-Type: application/json" \
+     -d "$JSON_PAYLOAD" "$INV_URL")
+CURL_EXIT=$?
+
+if [ "$CURL_EXIT" -ne 0 ]; then
+    echo "ASS-CMO agent: inventory upload failed (curl error $CURL_EXIT)" >&2
+    exit 1
+fi
+
+case "$HTTP_CODE" in
+    2*)
+        cat "$RESPONSE_BODY"
+        ;;
+    401|403)
+        echo "ASS-CMO agent not authorized or revoked; skipping inventory update" >&2
+        exit 0
+        ;;
+    *)
+        echo "ASS-CMO agent: inventory upload failed (HTTP $HTTP_CODE)" >&2
+        exit 1
+        ;;
+esac

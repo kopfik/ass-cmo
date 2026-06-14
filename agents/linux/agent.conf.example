@@ -1,0 +1,9 @@
+# ASS-CMO Linux agent host-local legacy/private migration example.
+# Do not copy this file to agents/linux/agent.conf in the repository or web-served /agents/ tree.
+# Fresh public installs should use the enrollment installer, which writes /etc/ass-cmo/agent.conf on the managed host after approval.
+
+ASSCMO_BASE_URL="https://ass-cmo.example.com"
+ASSCMO_AGENT_SECRET=""
+
+ASSCMO_AGENT_NAME="linux-shell"
+ASSCMO_AGENT_CHANNEL="stable"

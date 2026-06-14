@@ -1,0 +1,9 @@
+# ASS-CMO Windows agent host-local legacy/private migration example.
+# Do not copy this file to agents/windows/agent.conf.ps1 in the repository or web-served /agents/ tree.
+# Fresh public installs should use the enrollment installer, which writes %ProgramData%\ASS-CMO\agent.conf.ps1 on the managed host after approval.
+
+$ASSCMO_BASE_URL = "https://ass-cmo.example.com"
+$ASSCMO_AGENT_SECRET = ""
+
+$ASSCMO_AGENT_CHANNEL = "stable"
+$ASSCMO_AGENT_NAME = "windows-powershell"

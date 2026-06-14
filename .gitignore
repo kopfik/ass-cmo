@@ -1,0 +1,96 @@
+# Local deployment config / secrets
+config.local/.env
+config.local/sites.json
+
+
+# Local nginx deployment config
+config.local/nginx/*
+!config.local/nginx/.gitkeep
+
+# Local scripts / private postinstall scripts
+config.local/scripts/*
+!config.local/scripts/.gitkeep
+
+# Local Grafana custom/runtime files
+config.local/grafana/*
+!config.local/grafana/.gitkeep
+!config.local/grafana/dashboards/
+!config.local/grafana/provisioning/
+config.local/grafana/dashboards/*
+config.local/grafana/provisioning/*
+!config.local/grafana/dashboards/.gitkeep
+!config.local/grafana/provisioning/.gitkeep
+
+# Local Mosquitto config/secrets
+config.local/mosquitto/*
+!config.local/mosquitto/.gitkeep
+
+# Local Telegraf config
+config.local/telegraf/*
+!config.local/telegraf/.gitkeep
+
+# Backups / dumps
+config.local/backups/*
+!config.local/backups/.gitkeep
+*.sql
+*.dump
+*.backup
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+
+# Logs / temp
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Env files anywhere
+.env
+.env.*
+!.env.example
+
+# Certificates / keys
+*.key
+*.pem
+*.crt
+*.csr
+*.p12
+*.pfx
+
+!database/init/
+!database/init/*.sql
+!database/scripts/
+!database/scripts/*.sql
+# Local InfluxDB runtime/config
+config.local/influxdb/*
+!config.local/influxdb/.gitkeep
+!config.local/influxdb/config/
+config.local/influxdb/config/*
+!config.local/influxdb/config/.gitkeep
+
+# Real agent configs / shared inventory token
+agents/linux/agent.conf
+agents/windows/agent.conf.ps1
+!agents/linux/agent.conf.example
+!agents/windows/agent.conf.ps1.example
+
+# Local dashboard view overrides
+config.local/dashboard-views/*
+!config.local/dashboard-views/.gitkeep
+
+# Example dashboard views
+!config.example/dashboard-views/
+!config.example/dashboard-views/*.sql
+config.local/branding/*
+!config.local/branding/.gitkeep
+
+AGENTS.md

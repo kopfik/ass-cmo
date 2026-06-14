@@ -1,0 +1,27 @@
+#!/bin/sh
+set -eu
+
+url="${1:-}"
+target="${url#assweb://}"
+target="${target%%\?*}"
+
+if command -v python3 >/dev/null 2>&1; then
+  target="$(python3 -c 'import sys, urllib.parse; print(urllib.parse.unquote(sys.argv[1]))' "$target")"
+else
+  target="$(printf '%s' "$target" | sed 's/%3A/:/Ig; s/%2F/\//Ig; s/%3F/?/Ig; s/%26/\&/Ig; s/%3D/=/Ig; s/%40/@/Ig; s/%23/#/Ig; s/%25/%/Ig')"
+fi
+
+case "$target" in
+  http://*|https://*) ;;
+  *) exit 1 ;;
+esac
+
+xdg-open "$target" >/dev/null 2>&1 &
+
+sleep 0.4
+
+if command -v kdotool >/dev/null 2>&1; then
+  kdotool search --class firefox 2>/dev/null | tail -n 1 | xargs -r kdotool windowactivate || true
+fi
+
+exit 0

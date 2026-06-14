@@ -1,0 +1,25 @@
+server {
+    listen 80;
+    listen [::]:80;
+    server_name adminer.example.com;                    # <--- changeme
+    include snippets/redirect.conf;
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name adminer.example.com;                    # <--- changeme
+
+    include snippets/ssl-example.com.conf;              # <--- changeme
+    include snippets/proxy-ssl-params.conf;
+    include snippets/allowlist.conf;
+
+    location / {
+        proxy_pass http://adminer:8080; # Internal Docker network communication
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}

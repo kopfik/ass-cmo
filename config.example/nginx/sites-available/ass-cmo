@@ -1,0 +1,183 @@
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ass-cmo.example.com;                   # <--- changeme
+
+    include snippets/redirect.conf;
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name ass-cmo.example.com;                   # <--- changeme
+
+    include snippets/ssl-example.com.conf;             # <--- changeme
+    include snippets/ssl-params.conf;
+    include snippets/allowlist.conf;
+
+    root /var/www/html;
+    index index.php index.html;
+
+    # Serve only explicitly allowlisted secret-free agent installer/helper files.
+    # Do not expose generated host-local config files, tokens, dumps, backups, or editor leftovers.
+    location = /agents/linux/VERSION {
+        alias /var/www/agents/linux/VERSION;
+        default_type text/plain;
+    }
+
+    location = /agents/linux/99ass-cmo-agent {
+        alias /var/www/agents/linux/99ass-cmo-agent;
+        default_type text/plain;
+    }
+
+    location = /agents/linux/agent.conf.example {
+        alias /var/www/agents/linux/agent.conf.example;
+        default_type text/plain;
+    }
+
+    location = /agents/linux/ass-cmo-agent {
+        alias /var/www/agents/linux/ass-cmo-agent;
+        default_type text/plain;
+    }
+
+    location = /agents/linux/ass-cmo-agent.hook {
+        alias /var/www/agents/linux/ass-cmo-agent.hook;
+        default_type text/plain;
+    }
+
+    location = /agents/linux/ass-cmo-agent.service {
+        alias /var/www/agents/linux/ass-cmo-agent.service;
+        default_type text/plain;
+    }
+
+    location = /agents/linux/ass-cmo-agent.timer {
+        alias /var/www/agents/linux/ass-cmo-agent.timer;
+        default_type text/plain;
+    }
+
+    location = /agents/linux/install-ass-cmo-agent.sh {
+        alias /var/www/agents/linux/install-ass-cmo-agent.sh;
+        default_type text/plain;
+    }
+
+    location = /agents/windows/VERSION {
+        alias /var/www/agents/windows/VERSION;
+        default_type text/plain;
+    }
+
+    location = /agents/windows/agent.conf.ps1.example {
+        alias /var/www/agents/windows/agent.conf.ps1.example;
+        default_type text/plain;
+    }
+
+    location = /agents/windows/ass-cmo-agent.ps1 {
+        alias /var/www/agents/windows/ass-cmo-agent.ps1;
+        default_type text/plain;
+    }
+
+    location = /agents/windows/install-ass-cmo-agent.ps1 {
+        alias /var/www/agents/windows/install-ass-cmo-agent.ps1;
+        default_type text/plain;
+    }
+
+    location = /agents/windows/uninstall-ass-cmo-agent.ps1 {
+        alias /var/www/agents/windows/uninstall-ass-cmo-agent.ps1;
+        default_type text/plain;
+    }
+
+    location = /agents/handlers/linux/bundled/assrdp-handler {
+        alias /var/www/agents/handlers/linux/bundled/assrdp-handler;
+        default_type text/plain;
+    }
+
+    location = /agents/handlers/linux/bundled/assssh-handler {
+        alias /var/www/agents/handlers/linux/bundled/assssh-handler;
+        default_type text/plain;
+    }
+
+    location = /agents/handlers/linux/bundled/assweb-handler {
+        alias /var/www/agents/handlers/linux/bundled/assweb-handler;
+        default_type text/plain;
+    }
+
+    location = /agents/handlers/linux/examples/assssh-handler.yakuake {
+        alias /var/www/agents/handlers/linux/examples/assssh-handler.yakuake;
+        default_type text/plain;
+    }
+
+    location = /agents/handlers/linux/examples/assweb-handler.focus-firefox {
+        alias /var/www/agents/handlers/linux/examples/assweb-handler.focus-firefox;
+        default_type text/plain;
+    }
+
+    location = /agents/handlers/linux/install-ass-cmo-uri-handlers.sh {
+        alias /var/www/agents/handlers/linux/install-ass-cmo-uri-handlers.sh;
+        default_type text/plain;
+    }
+
+    location = /agents/handlers/tests/test-malicious-uri-targets.sh {
+        alias /var/www/agents/handlers/tests/test-malicious-uri-targets.sh;
+        default_type text/plain;
+    }
+
+    location = /agents/handlers/windows/install-ass-cmo-uri-handlers.ps1 {
+        alias /var/www/agents/handlers/windows/install-ass-cmo-uri-handlers.ps1;
+        default_type text/plain;
+    }
+
+    location /agents/ {
+        return 404;
+    }
+
+    location /branding/ {
+        alias /var/www/branding/;
+        autoindex off;
+        try_files $uri =404;
+    }
+
+    # Admin-managed public script repository. Everything in config.local/scripts is publicly reachable by direct URL.
+    # Do not place secrets, private keys, tokens, passwords, dumps, or editor backup files here.
+    location /scripts/ {
+        alias /var/www/scripts/;
+        autoindex off;
+        default_type text/plain;
+        try_files $uri =404;
+    }
+
+    location = /inventory.php {
+        client_max_body_size 1m;
+        limit_req zone=asscmo_inventory burst=10 nodelay;
+
+        try_files $uri =404;
+        fastcgi_pass php:9000;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    }
+
+    # Enrollment start/poll is unauthenticated but rate-limited; approve/deny actions must stay behind the operator-controlled admin boundary.
+    # Keep the dashboard and enrollment endpoints behind your normal ASS-CMO admin boundary.
+    location = /enroll.php {
+        client_max_body_size 64k;
+        limit_req zone=asscmo_inventory burst=10 nodelay;
+
+        try_files $uri =404;
+        fastcgi_pass php:9000;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    }
+
+    location ~ \.php$ {
+        try_files $uri =404;
+        fastcgi_split_path_info ^(.+\.php)(/.+)$;
+
+        fastcgi_pass php:9000;
+
+        fastcgi_index index.php;
+        include fastcgi_params;
+
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param PATH_INFO $fastcgi_path_info;
+    }
+
+}

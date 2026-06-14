@@ -1,0 +1,11 @@
+[Unit]
+Description=Run ASS-CMO inventory agent periodically
+
+[Timer]
+OnBootSec=30sec
+OnCalendar=*-*-* 00,12:01:00
+Persistent=true
+Unit=ass-cmo-agent.service
+
+[Install]
+WantedBy=timers.target
