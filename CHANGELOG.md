@@ -9,7 +9,7 @@
 - Refined public About wording around security model and project scope.
 - Kept `v0.8.0` as the planned public release milestone.
 
-## v0.8.0 - unreleased
+## v0.8.0
 
 ### Added
 
@@ -40,11 +40,6 @@
 - Removed PCRE `grep -P` usage from Linux agent interface and IP address detection; replaced with POSIX-compatible alternatives to avoid hard `grep` dependency on PCRE support.
 - Added server-side validation of host and SSH-user values before rendering `assssh://` and `assrdp://` launcher links; malformed or unsafe targets are silently omitted instead of rendered as active URIs.
 - Dashboard SQL view execution now requires `POSTGRES_DASHBOARD_USER` and `POSTGRES_DASHBOARD_PASSWORD` to be explicitly configured; the view query no longer falls back to the main admin database user when read-only credentials are missing, and a generic misconfiguration error is shown in the UI while the configuration detail goes to server logs only.
-
-### Remaining scope before public GitHub release
-
-- Agent VERSION bump and bundle alignment for public release.
-- Public-release hardening, secret scan, and clean GitHub repository creation.
 
 ## v0.7.3 - 2026-06-12
 

@@ -66,7 +66,6 @@ Agent enrollment uses a two-phase flow: the installer initiates a pending reques
 ## Current known risks
 
 - The shared inventory token (`ASSCMO_INVENTORY_TOKEN`) is deprecated and disabled by default. It is a migration-only compatibility path for private internal deployments that have not yet migrated to per-host secrets.
-- Public `v0.8.0` still depends on final documentation review, secret-scan verification, and clean public import/release gates.
 - Automatic agent updater is not shipped in public v0.8.0.
 - URI handler target validation needs continued hardening.
 - Inventory payload schema validation needs continued hardening.

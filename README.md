@@ -208,7 +208,7 @@ See [CHANGELOG.md](CHANGELOG.md).
 v0.5.x  first installable and usable ASS-CMO version
 v0.6.x  dashboard and launcher refinements
 v0.7.x  internal release and hotfixes
-v0.8.0  secure enrollment, per-host secrets, revocation, shared-token migration and clean public GitHub release gate
+v0.8.0  secure enrollment, per-host secrets, revocation, shared-token migration and clean public GitHub release
 v1.0.0  later stable release
 ```
 

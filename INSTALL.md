@@ -642,7 +642,7 @@ Verify that the certificate name in `ASSCMO_TLS_CERT_NAME` matches a directory i
 
 ```text
 v0.7.x  internal releases and hotfixes
-v0.8.0  secure enrollment, per-host secrets, revocation, legacy shared-token migration, clean public GitHub import/release candidate
+v0.8.0  secure enrollment, per-host secrets, revocation, legacy shared-token migration, clean public GitHub release
 v1.0.0  later stable release
 ```
 
