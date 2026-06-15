@@ -1,6 +1,62 @@
+/* =============================================================================
+ * ASS-CMO dashboard.css — PROTOTYPE (clean-architecture rewrite)
+ * -----------------------------------------------------------------------------
+ * This is a *drop-in replacement* prototype for app/public/assets/dashboard.css.
+ * It targets the EXISTING markup (index.php / layout.php / table.php / about.php)
+ * and requires NO PHP/JS/HTML changes.
+ *
+ * Architecture goals (see ./README.md):
+ *   - One component/layout skeleton that consumes semantic tokens only.
+ *   - Each theme is (almost) a pure variable map — no duplicated component rules.
+ *   - The normal table filter (#table-filter) and the Revoke-agents search
+ *     (#agent-auth-filter) share ONE component: `.filter-input`.
+ *   - Rosé Pine is the visual reference for the filter/search "feel"
+ *     (bordered, accent-aware, integrated) — each theme supplies its own colors.
+ *   - Future custom schemes = supply a predefined token set under
+ *     :root[data-theme="<name>"].
+ *
+ * Three independent layers (do NOT mix them):
+ *   - COLOR THEME      : palette + semantic color tokens (§1/§2). The active
+ *                        scheme. Server/JS picks it via :root[data-theme].
+ *   - COMPONENT SKELETON: layout/structure/component rules (§3–§12). Reads tokens.
+ *   - PRESENTATION MODE : local, browser-side decoration/effects/motion (§13),
+ *                        e.g. "Not boring". A localStorage preference — NOT a
+ *                        color theme and NOT a server setting. Colors still come
+ *                        from the active theme; only effects come from this layer.
+ *
+ * TWO token families share the `--control-*` prefix — do not confuse them:
+ *   - COLOR controls : --control-bg / --control-text / --control-border / ...
+ *                      (form fields: filter + search)
+ *   - SIZING controls: --control-radius / --control-padding-* / --control-font-size
+ *                      (compact pill buttons in §9, kept from the original)
+ *
+ * Section index:
+ *   1  Base tokens (default = Light)
+ *   2  Theme token maps (dark / midnight / light / retro / dust /
+ *                        dust-dark / rosé pine moon / rosé pine)
+ *   3  Reset / base elements
+ *   4  Layout (app grid, brand, content, fixed frame)
+ *   5  Top / header / meta
+ *   6  Sidebar / navigation
+ *   7  Dashboard table + filter/search component
+ *   8  Buttons / actions / badges
+ *   9  Compact controls (sizing tokens) + theme switch + copy command
+ *   10 Cards / enrollment / agent-auth
+ *   11 Command launcher
+ *   12 About modal + about page
+ *   13 Presentation modes (local, browser-side — e.g. "Not boring")
+ *   14 Responsive rules
+ *   15 Utilities / legacy compatibility
+ * ========================================================================== */
+
+
+/* =============================================================================
+ * 1. BASE TOKENS  (the :root defaults double as the Light theme)
+ * ========================================================================== */
 :root {
     color-scheme: light dark;
 
+    /* ── Raw palette ── */
     --bg: #e2e8f0;
     --panel: #f8fafc;
     --panel-2: #eef2f7;
@@ -15,6 +71,7 @@
     --table-row-hover: #f8fafc;
     --table-text: #111827;
     --table-muted: #6b7280;
+
     --input-bg: #ffffff;
     --input-text: #111827;
     --input-placeholder: #6b7280;
@@ -23,10 +80,107 @@
     --accent: #0284c7;
     --accent-soft: rgba(2, 132, 199, 0.25);
     --accent-text: #ffffff;
+    --accent-hover: var(--accent);
     --danger: #ef4444;
     --shadow: rgba(15, 23, 42, 0.08);
+
+    /* ── Semantic surfaces (consumed by the skeleton) ── */
+    --app-bg: var(--table-head-hover);   /* body background */
+    --brand-bg: var(--bg);
+    --top-bg: var(--panel);
+    --sidebar-bg: var(--panel-2);
+    --content-bg: transparent;           /* base: show body through */
+    --panel-bg: var(--panel);
+    --panel-2-bg: var(--panel-2);
+    --panel-border: var(--line);
+    --surface-panel-bg: var(--table-bg); /* copy/sidebar/launcher/about panels */
+    --meta-box-bg: var(--table-bg);
+    --table-tools-bg: var(--table-bg);
+    --modal-header-bg: var(--table-head);
+    --about-card-bg: var(--panel);
+    --about-card-border: var(--line);
+
+    --panel-shadow: 0 8px 24px var(--shadow);            /* table-wrap */
+    --sidebar-panel-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+    --modal-shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
+
+    --link-color: var(--accent);         /* .instance / sidebar tool links */
+    --meta-strong-color: var(--content); /* .meta strong */
+
+    /* ── Controls: filter + search (COLOR family) ── */
+    --control-bg: var(--input-bg);
+    --control-text: var(--input-text);
+    --control-placeholder: var(--input-placeholder);
+    --control-border: var(--input-border);
+    --control-border-width: 1px;
+    --control-accent-border: var(--accent);                 /* resting border */
+    --control-focus-border: var(--accent);
+    --control-focus-ring: 0 0 0 2px var(--accent-soft);
+    --control-shadow: inset 0 0 0 1px transparent;          /* resting hairline */
+
+    /* ── Sidebar / nav + theme-switch active "pill" ── */
+    --nav-hover-bg: var(--line);
+    --sidebar-active-bg: var(--accent);
+    --sidebar-active-border: var(--accent);
+    --sidebar-active-text: var(--accent-text);
+    --sidebar-active-shadow: none;
+    --sidebar-active-hover-bg: var(--sidebar-active-bg);
+    --sidebar-active-hover-border: var(--sidebar-active-border);
+    --sidebar-active-hover-text: var(--sidebar-active-text);
+    --sidebar-active-hover-shadow: var(--sidebar-active-shadow);
+
+    --theme-button-bg: var(--table-bg);
+    --theme-button-border: var(--line);
+    --theme-button-text: var(--table-text);
+    --theme-button-hover-bg: var(--theme-button-bg);
+    --theme-button-hover-border: var(--accent);
+
+    --copy-button-bg: var(--panel);
+    --copy-button-border: var(--line);
+    --copy-button-text: var(--content);
+    --copy-hover-bg: var(--table-head-hover);
+
+    --launcher-selected-bg: var(--table-row-hover);
+    --launcher-selected-border: var(--accent);
+    --launcher-selected-text: inherit;
+
+    /* ── Buttons / actions ── */
+    --button-action-bg: #059669;
+    --button-action-text: #ffffff;
+    --action-update-bg: #a85572;
+    --action-update-hover-bg: #c06c86;
+
+    /* ── Status / badges / cards ── */
+    --status-success: #22c55e;
+    --status-warning: #f59e0b;
+    --badge-pending-bg: var(--accent-soft);
+    --badge-pending-text: var(--accent);
+    --badge-expired-bg: rgba(100, 116, 139, 0.2);
+    --badge-expired-text: var(--muted);
+    --card-bg: var(--panel);
+    --card-border: var(--line);
+    --card-highlight-border: var(--accent);
+
+    /* ── Compact control SIZING family (pills — see §9) ── */
+    --control-radius: 0.45rem;
+    --control-padding-y: 0.28rem;
+    --control-padding-x: 0.55rem;
+    --control-font-size: 0.76rem;
+    --control-line-height: 1.2;
 }
 
+
+/* =============================================================================
+ * 2. THEME TOKEN MAPS
+ * -----------------------------------------------------------------------------
+ * Token-only themes (dark/midnight/light/retro/dust) override raw palette
+ * variables and inherit all semantic behaviour from §1.
+ * Designer themes (dust-dark / rosé pine moon / rosé pine) additionally supply
+ * the semantic surface/control/active tokens that previously lived as
+ * per-selector overrides — so they remain pure variable maps.
+ * ========================================================================== */
+
+/* System dark preference mirrors the explicit "dark" theme. */
 @media (prefers-color-scheme: dark) {
     :root {
         --bg: #1e1e1e;
@@ -43,6 +197,7 @@
         --table-row-hover: #252526;
         --table-text: #d4d4d4;
         --table-muted: #9da3a6;
+
         --input-bg: #d9d9d9;
         --input-text: #111827;
         --input-placeholder: #6b7280;
@@ -53,9 +208,15 @@
         --accent-text: #ffffff;
         --danger: #f14c4c;
         --shadow: rgba(0, 0, 0, 0.35);
+
+        /* Light, blue-tinted control surface (no-JS dark fallback). */
+        --control-bg: #d6e8f8;
+        --control-text: #0c2536;
+        --control-placeholder: #4f6a7e;
     }
 }
 
+/* ── Theme: Dark ── */
 :root[data-theme="dark"] {
     --bg: #1e1e1e;
     --panel: #252526;
@@ -71,6 +232,7 @@
     --table-row-hover: #252526;
     --table-text: #d4d4d4;
     --table-muted: #9da3a6;
+
     --input-bg: #d9d9d9;
     --input-text: #111827;
     --input-placeholder: #6b7280;
@@ -81,10 +243,14 @@
     --accent-text: #ffffff;
     --danger: #f14c4c;
     --shadow: rgba(0, 0, 0, 0.35);
+
+    /* Light, blue-tinted control surface (not a neutral gray block). */
+    --control-bg: #d6e8f8;
+    --control-text: #0c2536;
+    --control-placeholder: #4f6a7e;
 }
 
-
-
+/* ── Theme: Midnight ── */
 :root[data-theme="midnight"] {
     --bg: #0f172a;
     --panel: #111827;
@@ -100,6 +266,7 @@
     --table-row-hover: #202938;
     --table-text: #e8e6d8;
     --table-muted: #c7c5b4;
+
     --input-bg: #fff5cc;
     --input-text: #111827;
     --input-placeholder: #6f6848;
@@ -110,8 +277,17 @@
     --accent-text: #1f2937;
     --danger: #f87171;
     --shadow: rgba(0, 0, 0, 0.35);
+
+    /* Yellow/cream control identity — explicit so the dark-OS @media fallback
+     * (which sets a blue --control-bg on :root) can never leak in. */
+    --control-bg: #fff5cc;
+    --control-text: #111827;
+    --control-placeholder: #6f6848;
+    --control-accent-border: var(--accent);
+    --control-focus-ring: 0 0 0 2px var(--accent-soft);
 }
 
+/* ── Theme: Light (mirrors :root) ── */
 :root[data-theme="light"] {
     --bg: #e2e8f0;
     --panel: #f8fafc;
@@ -127,6 +303,7 @@
     --table-row-hover: #f8fafc;
     --table-text: #111827;
     --table-muted: #6b7280;
+
     --input-bg: #ffffff;
     --input-text: #111827;
     --input-placeholder: #6b7280;
@@ -137,30 +314,330 @@
     --accent-text: #ffffff;
     --danger: #ef4444;
     --shadow: rgba(15, 23, 42, 0.08);
+
+    /* Light, blue-tinted control surface (Midnight-strength tint). */
+    --control-bg: #e6f0fb;
+    --control-text: #102536;
+    --control-placeholder: #55687a;
 }
 
+/* ── Theme: Retro ── */
+:root[data-theme="retro"] {
+    --bg: #d8cdb8;
+    --panel: #efe6d2;
+    --panel-2: #e5dac5;
+    --content: #2b2418;
+    --muted: #6f614a;
+    --line: #b8aa8e;
+
+    --page-bg: #ded3bd;
+    --table-bg: #f7f0df;
+    --table-head: #e8dcc5;
+    --table-head-hover: #ddd0b8;
+    --table-row-hover: #f1e8d5;
+    --table-text: #2b2418;
+    --table-muted: #6f614a;
+
+    --input-bg: #fff8e8;
+    --input-text: #2b2418;
+    --input-placeholder: #7a6b52;
+    --input-border: #b8aa8e;
+
+    --accent: #8b6f2f;
+    --accent-soft: rgba(139, 111, 47, 0.25);
+    --accent-text: #fff7df;
+    --danger: #b91c1c;
+    --shadow: rgba(80, 60, 30, 0.18);
+
+    /* Cream/gold control identity — explicit so the dark-OS @media fallback
+     * (which sets a blue --control-bg on :root) can never leak in. */
+    --control-bg: #fffdf3;          /* cleaner cream, brighter than panel #f7f0df */
+    --control-text: #2b2418;
+    --control-placeholder: #7a6b52;
+    --control-accent-border: #9a7a24;   /* a touch more saturated brown/gold */
+    --control-focus-ring: 0 0 0 2px var(--accent-soft);
+}
+
+/* ── Theme: Dust ── */
+:root[data-theme="dust"] {
+    --bg: #d8c8ce;
+    --panel: #f1e7eb;
+    --panel-2: #e7d9df;
+    --content: #2f1f26;
+    --muted: #755b66;
+    --line: #c8aeb8;
+
+    --page-bg: #e3d3d9;
+    --table-bg: #fff8fa;
+    --table-head: #efe0e6;
+    --table-head-hover: #e5d0d8;
+    --table-row-hover: #faeef3;
+    --table-text: #2f1f26;
+    --table-muted: #755b66;
+
+    --input-bg: #fff6f8;
+    --input-text: #2f1f26;
+    --input-placeholder: #806672;
+    --input-border: #c8aeb8;
+
+    --accent: #a85572;
+    --accent-soft: rgba(168, 85, 114, 0.22);
+    --accent-text: #ffffff;
+    --danger: #b91c1c;
+    --shadow: rgba(80, 40, 55, 0.16);
+
+    /* Pink/dust control identity — explicit so the dark-OS @media fallback
+     * (which sets a blue --control-bg on :root) can never leak in. */
+    --control-bg: #fffbfc;          /* cleaner pink-white, brighter than panel #fff8fa */
+    --control-text: #2f1f26;
+    --control-placeholder: #806672;
+    --control-accent-border: #b24a6e;   /* a touch more saturated pink */
+    --control-focus-ring: 0 0 0 2px var(--accent-soft);
+}
+
+/* ── Theme: Dust Dark (designer — pure variable map) ── */
+:root[data-theme="dust-dark"] {
+    --bg: #1b171d;
+    --panel: #241f27;
+    --panel-2: #2d2630;
+    --content: #f2e9ee;
+    --muted: #c7b5bf;
+    --line: #2e2930;
+
+    --table-bg: #261f28;
+    --table-head: #3a303d;
+    --table-head-hover: #473949;
+    --table-row-hover: #312834;
+    --table-text: #f2e9ee;
+    --table-muted: #c7b5bf;
+
+    --accent: #a85572;
+    --accent-hover: #c06c86;
+    --accent-soft: rgba(168, 85, 114, 0.22); /* was undefined → fell back to blue */
+    --accent-text: #ffffff;
+    --danger: #f87171;
+    --shadow: rgba(0, 0, 0, 0.42);
+
+    /* surfaces */
+    --app-bg: #1b171d;
+    --brand-bg: #18151b;
+    --top-bg: #211b23;
+    --sidebar-bg: #221d25;
+    --content-bg: #1b171d;
+    --meta-box-bg: var(--panel-2);
+    --table-tools-bg: var(--panel-2);
+    --modal-header-bg: var(--panel-2);
+    --panel-shadow: 0 12px 30px rgba(0, 0, 0, 0.42);
+    --sidebar-panel-shadow: 0 12px 30px rgba(0, 0, 0, 0.42);
+    --modal-shadow: 0 12px 30px rgba(0, 0, 0, 0.42);
+
+    --link-color: #c06c86;
+
+    /* theme switch + active pill */
+    --theme-button-bg: #241f27;
+    --theme-button-border: #5b4858;
+    --theme-button-text: #eadde4;
+    --theme-button-hover-bg: #332934;
+    --sidebar-active-bg: #c06c86;
+    --sidebar-active-border: #c06c86;
+    --sidebar-active-text: #ffffff;
+
+    /* filter / search control */
+    --control-bg: #f6dbe6;          /* light pink-tinted surface */
+    --control-text: #2a1820;
+    --control-placeholder: #6e4257;
+    --control-accent-border: #8a647c;
+    --control-focus-border: #c06c86;
+    --control-shadow: inset 0 0 0 1px rgba(192, 108, 134, 0.18);
+    --control-focus-ring: 0 0 0 2px rgba(192, 108, 134, 0.18), inset 0 0 0 1px rgba(192, 108, 134, 0.22);
+}
+
+/* ── Theme: Rosé Pine Moon (designer — pure variable map) ── */
+:root[data-theme="rose-pine-moon"] {
+    --bg: #191724;
+    --panel: #211f30;
+    --panel-2: #2f2b45;
+    --content: #e0def4;
+    --muted: #908caa;
+    --line: #4a465f;
+
+    --table-bg: #191724;
+    --table-head: #312d49;
+    --table-head-hover: #3a3554;
+    --table-row-hover: #242135;
+    --table-text: #e0def4;
+    --table-muted: #908caa;
+
+    --accent: #ebbcba;
+    --accent-hover: #f6c6c4;
+    --accent-soft: rgba(235, 188, 186, 0.22);
+    --accent-text: #191724;
+    --danger: #eb6f92;
+    --shadow: rgba(0, 0, 0, 0.40);
+
+    /* surfaces */
+    --app-bg: #26233a;
+    --brand-bg: #191724;
+    --top-bg: #211f30;
+    --sidebar-bg: #2a273f;
+    --surface-panel-bg: var(--panel);
+    --panel-shadow: 0 12px 30px rgba(0, 0, 0, 0.40);
+    --sidebar-panel-shadow: 0 12px 30px rgba(0, 0, 0, 0.40);
+    --modal-shadow: 0 12px 30px rgba(0, 0, 0, 0.40);
+
+    --link-color: var(--accent);
+    --meta-strong-color: var(--accent);
+    --copy-hover-bg: var(--table-row-hover);
+
+    /* theme switch + active pill */
+    --theme-button-bg: #1f1d2e;
+    --theme-button-border: #4a465f;
+    --theme-button-text: #e0def4;
+    --theme-button-hover-bg: #26233a;
+    --sidebar-active-bg: #403d52;
+    --sidebar-active-border: #ebbcba;
+    --sidebar-active-text: #ebbcba;
+    --sidebar-active-shadow: inset 0 0 0 1px rgba(235, 188, 186, 0.18);
+    --sidebar-active-hover-bg: #4a465f;
+    --sidebar-active-hover-border: #f6c6c4;
+    --sidebar-active-hover-text: #f6c6c4;
+    --sidebar-active-hover-shadow: inset 0 0 0 1px rgba(246, 198, 196, 0.22);
+
+    /* filter / search control */
+    --control-bg: #f5dee2;          /* light rose-tinted surface */
+    --control-text: #2a2030;
+    --control-placeholder: #6c5a64;
+    --control-accent-border: #ebbcba;       /* unified to accent (was #6e6a86) */
+    --control-focus-border: #ebbcba;
+    --control-shadow: inset 0 0 0 1px rgba(235, 188, 186, 0.12);
+    --control-focus-ring: 0 0 0 2px rgba(235, 188, 186, 0.16), inset 0 0 0 1px rgba(235, 188, 186, 0.18);
+
+    /* action role recolor */
+    --action-update-bg: #b4637a;
+    --action-update-hover-bg: #c76d88;
+}
+
+/* ── Theme: Rosé Pine (designer reference — pure variable map) ── */
+:root[data-theme="rose-pine"] {
+    --bg: #191724;
+    --panel: #1f1d2e;
+    --panel-2: #26233a;
+    --content: #e0def4;
+    --muted: #908caa;
+    --line: #2c2938;
+
+    --table-bg: #211f30;
+    --table-head: #2a273f;
+    --table-head-hover: #383250;
+    --table-row-hover: #29263a;
+    --table-text: #e0def4;
+    --table-muted: #908caa;
+
+    --accent: #ebbcba;
+    --accent-hover: #f6c6c4;
+    --accent-soft: rgba(235, 188, 186, 0.22);
+    --accent-text: #191724;
+    --danger: #eb6f92;
+    --shadow: rgba(0, 0, 0, 0.48);
+
+    /* surfaces */
+    --app-bg: #191724;
+    --brand-bg: #15121f;
+    --top-bg: #1b1827;
+    --sidebar-bg: #1b1827;
+    --content-bg: #171521;
+    --surface-panel-bg: var(--panel);
+    --about-card-bg: #171521;
+    --about-card-border: #2f2a40;
+    --panel-shadow: 0 14px 34px rgba(0, 0, 0, 0.48);
+    --sidebar-panel-shadow: 0 14px 34px rgba(0, 0, 0, 0.48);
+    --modal-shadow: 0 14px 34px rgba(0, 0, 0, 0.48);
+
+    --link-color: var(--accent);
+    --meta-strong-color: var(--accent);
+    --copy-hover-bg: var(--table-row-hover);
+
+    /* theme switch + active pill */
+    --theme-button-bg: #1f1d2e;
+    --theme-button-border: #403d52;
+    --theme-button-text: #e0def4;
+    --theme-button-hover-bg: #26233a;
+    --theme-button-hover-border: #6e6a86;
+    --sidebar-active-bg: #2f2a45;
+    --sidebar-active-border: #ea9a97;
+    --sidebar-active-text: #f2d6d4;
+    --sidebar-active-shadow: inset 0 0 0 1px rgba(234, 154, 151, 0.18);
+    --sidebar-active-hover-bg: #383250;
+    --sidebar-active-hover-border: #f2b8b5;
+    --sidebar-active-hover-text: #f6deda;
+    --sidebar-active-hover-shadow: inset 0 0 0 1px rgba(234, 154, 151, 0.18);
+
+    --copy-button-bg: #211f30;
+    --copy-button-border: #403d52;
+    --copy-button-text: #e0def4;
+
+    --launcher-selected-bg: #2a273f;
+    --launcher-selected-border: #ebbcba;
+    --launcher-selected-text: #f2d6d4;
+
+    /* filter / search control — the visual reference */
+    --control-bg: #f5dedd;          /* light rose-tinted surface */
+    --control-text: #2a1f28;
+    --control-placeholder: #6e5a66;
+    --control-accent-border: #ea9a97;
+    --control-focus-border: #f2b8b5;
+    --control-shadow: inset 0 0 0 1px rgba(234, 154, 151, 0.16);
+    --control-focus-ring: 0 0 0 1px rgba(242, 184, 181, 0.28), inset 0 0 0 1px rgba(242, 184, 181, 0.18);
+
+    /* action role recolor */
+    --action-update-bg: #b4637a;
+    --action-update-hover-bg: #c76d88;
+}
+
+
+/* =============================================================================
+ * 3. RESET / BASE ELEMENTS
+ * ========================================================================== */
 * {
     box-sizing: border-box;
+}
+
+html,
+body {
+    height: 100%;
+    overflow: hidden;            /* fixed app frame */
 }
 
 body {
     margin: 0;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background: var(--table-head-hover);
+    background: var(--app-bg);
     color: var(--table-text);
 }
 
+
+/* =============================================================================
+ * 4. LAYOUT  (app grid, brand, content, fixed frame)
+ * ========================================================================== */
 .app {
-    min-height: 100vh;
+    height: 100vh;
+    min-height: 0;
     display: grid;
     grid-template-columns: 260px 1fr;
     grid-template-rows: 150px 1fr;
 }
 
+.brand,
+.top,
+.sidebar,
+.content {
+    min-height: 0;
+}
+
 .brand {
     grid-column: 1;
     grid-row: 1;
-    background: var(--bg);
+    background: var(--brand-bg);
     color: var(--content);
     padding: 24px;
     border-right: 1px solid var(--line);
@@ -183,14 +660,26 @@ body {
 .instance {
     margin-top: 18px;
     font-size: 12px;
-    color: var(--accent);
+    color: var(--link-color);
     word-break: break-all;
 }
 
+.content {
+    grid-column: 2;
+    grid-row: 2;
+    padding: 20px;
+    overflow: auto;
+    background: var(--content-bg);
+}
+
+
+/* =============================================================================
+ * 5. TOP / HEADER / META
+ * ========================================================================== */
 .top {
     grid-column: 2;
     grid-row: 1;
-    background: var(--panel);
+    background: var(--top-bg);
     color: var(--content);
     padding: 24px 32px;
     display: flex;
@@ -211,6 +700,10 @@ body {
 }
 
 .meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.55rem;
     color: var(--muted);
     font-size: 13px;
     line-height: 1.7;
@@ -219,13 +712,109 @@ body {
 }
 
 .meta strong {
-    color: var(--content);
+    color: var(--meta-strong-color);
 }
 
+/* Shared meta-box (sidebar versions, enrollment meta, etc.) */
+.meta-box {
+    background: var(--meta-box-bg);
+    border: 1px solid var(--line);
+    border-radius: 0.75rem;
+    padding: 0.85rem 1rem;
+    color: var(--muted);
+    line-height: 1.45;
+}
+
+.meta-box-compact {
+    min-width: 24rem;
+}
+
+.meta-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: baseline;
+    gap: 1rem;
+    white-space: nowrap;
+}
+
+.meta-box-compact .meta-row {
+    grid-template-columns: 5rem 1fr;
+}
+
+.meta-row + .meta-row {
+    margin-top: 0.25rem;
+}
+
+.meta-row span {
+    color: var(--muted);
+}
+
+.meta-box-compact .meta-row span {
+    text-align: left;
+}
+
+.meta-row strong {
+    color: var(--content);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+.meta-box-compact .meta-row strong {
+    text-align: right;
+}
+
+/* Keep the top metadata box visually integrated with the header. */
+.top .meta-box,
+:root[data-theme] .top .meta-box {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+    padding: 0;
+}
+
+/* Compact metadata in the header (right-aligned, "key: value" rows). */
+.meta .meta-box-compact {
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.16rem;
+}
+
+.meta .meta-box-compact .meta-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.45rem;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.meta .meta-box-compact .meta-row + .meta-row {
+    margin-top: 0;
+}
+
+.meta .meta-box-compact .meta-row span::after {
+    content: ":";
+}
+
+.meta .meta-box-compact .meta-row strong {
+    color: var(--content);
+    font-weight: 700;
+    text-align: right;
+}
+
+
+/* =============================================================================
+ * 6. SIDEBAR / NAVIGATION
+ * ========================================================================== */
 .sidebar {
     grid-column: 1;
     grid-row: 2;
-    background: var(--panel-2);
+    background: var(--sidebar-bg);
     color: var(--content);
     padding: 18px 12px;
     border-right: 1px solid var(--line);
@@ -236,6 +825,7 @@ body {
     height: calc(100vh - 150px);
     box-sizing: border-box;
     overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .nav-title {
@@ -251,19 +841,29 @@ body {
     color: var(--content);
     text-decoration: none;
     padding: 10px 12px;
+    border: 1px solid transparent;       /* stable box for the active border */
     border-radius: 8px;
     margin-bottom: 4px;
     font-size: 14px;
 }
 
 .nav-item:hover {
-    background: var(--line);
+    background: var(--nav-hover-bg);
 }
 
 .nav-item.active {
-    background: var(--accent);
-    color: var(--accent-text);
+    background: var(--sidebar-active-bg);
+    border-color: var(--sidebar-active-border);
+    color: var(--sidebar-active-text);
+    box-shadow: var(--sidebar-active-shadow);
     font-weight: 700;
+}
+
+.nav-item.active:hover {
+    background: var(--sidebar-active-hover-bg);
+    border-color: var(--sidebar-active-hover-border);
+    color: var(--sidebar-active-hover-text);
+    box-shadow: var(--sidebar-active-hover-shadow);
 }
 
 .sidebar-tools {
@@ -286,7 +886,7 @@ body {
 
 .sidebar-tool-link {
     display: block;
-    color: var(--accent);
+    color: var(--link-color);
     text-decoration: none;
     font-size: 13px;
     padding: 7px 8px;
@@ -295,57 +895,29 @@ body {
 }
 
 .sidebar-tool-link:hover {
-    background: var(--line);
+    background: var(--nav-hover-bg);
 }
 
-.copy-command {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    align-items: center;
-    gap: 8px;
-    padding: 7px 8px;
-    border-radius: 8px;
+.sidebar-tool-link.active {
+    color: var(--link-color);
+    font-weight: 700;
 }
 
-.copy-command:hover {
-    background: var(--line);
+.sidebar-footer {
+    margin-top: auto;
+    font-size: 0.72rem;
 }
 
-.copy-command-label {
-    color: var(--content);
-    font-size: 12px;
-    line-height: 1.25;
-}
 
-.copy-command-button {
-    border: 1px solid var(--line);
-    background: var(--table-bg);
-    color: var(--table-text);
-    border-radius: 999px;
-    padding: 3px 8px;
-    font: inherit;
-    font-size: 11px;
-    cursor: pointer;
-}
-
-.copy-command-button:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-}
-
-.content {
-    grid-column: 2;
-    grid-row: 2;
-    padding: 20px;
-    overflow: auto;
-}
-
+/* =============================================================================
+ * 7. DASHBOARD TABLE + FILTER / SEARCH COMPONENT
+ * ========================================================================== */
 .table-wrap {
     background: var(--table-bg);
     border: 1px solid var(--line);
     border-radius: 10px;
     overflow: auto;
-    box-shadow: 0 8px 24px var(--shadow);
+    box-shadow: var(--panel-shadow);
 }
 
 table {
@@ -355,7 +927,8 @@ table {
     white-space: nowrap;
 }
 
-th, td {
+th,
+td {
     padding: 9px 10px;
     border-bottom: 1px solid var(--line);
     text-align: left;
@@ -390,126 +963,6 @@ th.actions-col {
     background: var(--table-head);
 }
 
-.action {
-    display: inline-block;
-    margin: 0 4px 3px 0;
-    padding: 4px 7px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 700;
-    text-decoration: none;
-    color: #ffffff;
-    background: #059669;
-}
-
-.action-ssh {
-    background: #2563eb;
-}
-
-.action-rdp {
-    background: #7c3aed;
-}
-
-.action-pve {
-    background: #ea580c;
-}
-
-.error, .empty {
-    background: var(--table-bg);
-    border-radius: 10px;
-    padding: 18px;
-    border: 1px solid var(--line);
-}
-
-.error {
-    color: var(--danger);
-}
-
-.muted {
-    color: var(--table-muted);
-}
-
-@media (max-width: 900px) {
-    .app {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto auto auto 1fr;
-    }
-
-    .brand, .top, .sidebar, .content {
-        grid-column: 1;
-        grid-row: auto;
-    }
-
-    .top {
-        display: block;
-    }
-
-    .meta {
-        margin-top: 16px;
-        text-align: left;
-    }
-}
-
-.action-web {
-    background: #059669;
-}
-
-.action-pve,
-.action-pbs,
-.action-pmg,
-.action-pdm {
-    background: #ea580c;
-}
-
-
-.table-tools {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 12px;
-    background: var(--table-bg);
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    padding: 10px 12px;
-    box-shadow: 0 8px 24px var(--shadow);
-}
-
-.filter-label {
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--table-text);
-}
-
-.filter-input {
-    width: min(520px, 100%);
-    padding: 8px 10px;
-    border: 1px solid var(--input-border);
-    border-radius: 8px;
-    background: var(--input-bg);
-    color: var(--input-text);
-    color-scheme: light;
-    font: inherit;
-    font-size: 14px;
-}
-
-.filter-input::placeholder {
-    color: var(--input-placeholder);
-}
-
-.filter-input:focus {
-    outline: 2px solid var(--accent-soft);
-    border-color: var(--accent);
-}
-
-.row-count {
-    margin-left: auto;
-    color: var(--table-muted);
-    font-size: 13px;
-    white-space: nowrap;
-}
-
 th.sortable {
     cursor: pointer;
     user-select: none;
@@ -529,1313 +982,147 @@ th.sort-desc::after {
     color: var(--table-text);
 }
 
-
-
-
-:root[data-theme="retro"] {
-    --bg: #d8cdb8;
-    --panel: #efe6d2;
-    --panel-2: #e5dac5;
-    --content: #2b2418;
-    --muted: #6f614a;
-    --line: #b8aa8e;
-
-    --page-bg: #ded3bd;
-    --table-bg: #f7f0df;
-    --table-head: #e8dcc5;
-    --table-head-hover: #ddd0b8;
-    --table-row-hover: #f1e8d5;
-    --table-text: #2b2418;
-    --table-muted: #6f614a;
-    --input-bg: #fff8e8;
-    --input-text: #2b2418;
-    --input-placeholder: #7a6b52;
-    --input-border: #b8aa8e;
-
-    --accent: #8b6f2f;
-    --accent-soft: rgba(139, 111, 47, 0.25);
-    --accent-text: #fff7df;
-    --danger: #b91c1c;
-    --shadow: rgba(80, 60, 30, 0.18);
-}
-
-:root[data-theme="dust"] {
-    --bg: #d8c8ce;
-    --panel: #f1e7eb;
-    --panel-2: #e7d9df;
-    --content: #2f1f26;
-    --muted: #755b66;
-    --line: #c8aeb8;
-
-    --page-bg: #e3d3d9;
-    --table-bg: #fff8fa;
-    --table-head: #efe0e6;
-    --table-head-hover: #e5d0d8;
-    --table-row-hover: #faeef3;
-    --table-text: #2f1f26;
-    --table-muted: #755b66;
-    --input-bg: #fff6f8;
-    --input-text: #2f1f26;
-    --input-placeholder: #806672;
-    --input-border: #c8aeb8;
-
-    --accent: #a85572;
-    --accent-soft: rgba(168, 85, 114, 0.22);
-    --accent-text: #ffffff;
-    --danger: #b91c1c;
-    --shadow: rgba(80, 40, 55, 0.16);
-}
-
-.theme-switcher {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 6px;
-    margin-bottom: 8px;
-}
-
-.theme-switcher span {
-    color: var(--muted);
-    font-size: 12px;
-}
-
-.theme-button {
-    border: 1px solid var(--line);
-    background: var(--table-bg);
-    color: var(--table-text);
-    border-radius: 999px;
-    padding: 3px 8px;
-    font: inherit;
-    font-size: 12px;
-    cursor: pointer;
-}
-
-.theme-button:hover {
-    border-color: var(--accent);
-}
-
-.theme-button.active {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--accent-text);
-    font-weight: 700;
-}
-
-.command-launcher[hidden] {
-    display: none;
-}
-
-.command-launcher {
-    position: fixed;
-    inset: 0;
-    z-index: 1000;
-}
-
-.command-launcher-backdrop {
-    position: absolute;
-    inset: 0;
-    background: rgba(2, 6, 23, 0.62);
-    backdrop-filter: blur(4px);
-}
-
-.command-launcher-panel {
-    position: relative;
-    width: min(760px, calc(100vw - 32px));
-    margin: 9vh auto 0;
-    background: var(--table-bg);
-    color: var(--table-text);
-    border: 1px solid var(--line);
-    border-radius: 16px;
-    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
-    overflow: hidden;
-}
-
-.command-launcher-input-wrap {
+/* ── Filter / search bar (shared by the table filter and Revoke search) ── */
+.table-tools {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 14px;
-    border-bottom: 1px solid var(--line);
-    background: var(--panel);
+    margin-bottom: 12px;
+    background: var(--table-tools-bg);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 12px;
+    box-shadow: var(--panel-shadow);
 }
 
-.command-launcher-prefix {
-    border: 1px solid var(--line);
-    background: var(--panel-2);
-    color: var(--muted);
-    border-radius: 8px;
-    padding: 5px 8px;
+.filter-label {
     font-size: 12px;
     font-weight: 700;
-    white-space: nowrap;
-}
-
-.command-launcher-input {
-    width: 100%;
-    border: 0;
-    outline: 0;
-    background: transparent;
-    color: var(--content);
-    font: inherit;
-    font-size: 20px;
-}
-
-.command-launcher-input::placeholder {
-    color: var(--muted);
-}
-
-.command-launcher-results {
-    max-height: 58vh;
-    overflow: auto;
-    padding: 8px;
-}
-
-.command-launcher-item {
-    width: 100%;
-    border: 1px solid transparent;
-    background: transparent;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
     color: var(--table-text);
-    display: block;
-    text-align: left;
-    padding: 10px 12px;
-    border-radius: 10px;
-    cursor: pointer;
+}
+
+/*
+ * ONE component for both #table-filter and #agent-auth-filter.
+ * Resting border uses the theme accent (Rosé Pine style); focus shows a
+ * theme-aware ring. No per-theme #table-filter / #agent-auth-filter overrides.
+ */
+.filter-input {
+    width: min(520px, 100%);
+    padding: 8px 10px;
+    border: var(--control-border-width) solid var(--control-accent-border);
+    border-radius: 8px;
+    background: var(--control-bg);
+    color: var(--control-text);
+    color-scheme: light;
+    box-shadow: var(--control-shadow);
     font: inherit;
-}
-
-.command-launcher-item:hover,
-.command-launcher-item.selected {
-    background: var(--table-row-hover);
-    border-color: var(--accent);
-}
-
-.command-launcher-item-title {
-    font-weight: 800;
     font-size: 14px;
 }
 
-.command-launcher-item-subtitle {
+.filter-input::placeholder {
+    color: var(--control-placeholder);
+}
+
+.filter-input:focus {
+    outline: 2px solid transparent;      /* keeps focus visible in forced-colors */
+    outline-offset: 2px;
+    border-color: var(--control-focus-border);
+    box-shadow: var(--control-focus-ring);
+}
+
+.row-count {
+    margin-left: auto;
     color: var(--table-muted);
-    font-size: 12px;
-    margin-top: 3px;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-size: 13px;
     white-space: nowrap;
 }
 
-.command-launcher-empty {
-    color: var(--table-muted);
-    padding: 18px 12px;
-    text-align: center;
+
+/* =============================================================================
+ * 8. BUTTONS / ACTIONS / BADGES
+ * -----------------------------------------------------------------------------
+ * Action role colors are intentionally theme-independent constants (they encode
+ * a protocol/role, not a palette). Only `action-update` is theme-tinted.
+ * (Duplicate/override blocks from the original have been merged to final values.)
+ * ========================================================================== */
+.action {
+    display: inline-block;
+    margin: 0 4px 3px 0;
+    padding: 4px 7px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    text-decoration: none;
+    color: var(--button-action-text);
+    background: var(--button-action-bg);
 }
 
-.command-launcher-help {
-    border-top: 1px solid var(--line);
-    color: var(--table-muted);
-    font-size: 12px;
-    padding: 9px 14px;
-    background: var(--panel);
+button.action {
+    appearance: none;
+    -webkit-appearance: none;
+    font: inherit;
+    cursor: pointer;
 }
 
-.sidebar-footer {
-  margin-top: auto;
-  font-size: 0.72rem;
+.action-web {
+    background: var(--button-action-bg);
 }
 
-
-.meta-box {
-  background: var(--table-bg);
-  border: 1px solid var(--line);
-  border-radius: 0.75rem;
-  padding: 0.85rem 1rem;
-  color: var(--muted);
-  line-height: 1.45;
-}
-
-.meta-box-compact {
-  min-width: 17rem;
-}
-
-.meta-row {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: baseline;
-  gap: 1rem;
-  white-space: nowrap;
-}
-
-.meta-row + .meta-row {
-  margin-top: 0.25rem;
-}
-
-.meta-row span {
-  color: var(--muted);
-}
-
-.meta-row strong {
-  color: var(--content);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-}
-
-.action-shell {
-  border-color: rgba(168, 85, 247, 0.45);
-  background: rgba(168, 85, 247, 0.16);
-  color: #e9d5ff;
-}
-
-.command-launcher-item-title {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-}
-
-.command-launcher-badge {
-  display: inline-block;
-  flex: 0 0 auto;
-  margin: 0;
-  padding: 4px 7px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1.2;
-  color: #ffffff;
-  background: #059669;
-  white-space: nowrap;
-}
-
-.command-launcher-badge.action-ssh {
-  background: #2563eb;
-}
-
-.command-launcher-badge.action-rdp {
-  background: #7c3aed;
-}
-
-.command-launcher-badge.action-pve,
-.command-launcher-badge.action-pbs,
-.command-launcher-badge.action-pmg,
-.command-launcher-badge.action-pdm {
-  background: #ea580c;
-}
-
-.command-launcher-badge.action-shell {
-  background: rgba(168, 85, 247, 0.38);
-  color: #e9d5ff;
-}
-
-.command-launcher-title-text {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-
-/* Action color role overrides */
 .action-ssh,
 .command-launcher-badge.action-ssh {
-  background: #007acc;
-  color: #ffffff;
+    background: #007acc;
+    color: #ffffff;
 }
 
 .action-rdp,
 .command-launcher-badge.action-rdp {
-  background: #8b6f2f;
-  color: #ffffff;
+    background: #8b6f2f;
+    color: #ffffff;
+}
+
+.action-pve,
+.action-pbs,
+.action-pmg,
+.action-pdm,
+.command-launcher-badge.action-pve,
+.command-launcher-badge.action-pbs,
+.command-launcher-badge.action-pmg,
+.command-launcher-badge.action-pdm {
+    background: #ea580c;
+    color: #ffffff;
+}
+
+.action-pve:hover,
+.action-pbs:hover,
+.action-pmg:hover,
+.action-pdm:hover,
+.command-launcher-badge.action-pve:hover,
+.command-launcher-badge.action-pbs:hover,
+.command-launcher-badge.action-pmg:hover,
+.command-launcher-badge.action-pdm:hover {
+    background: #b85b00;
+    color: #ffffff;
 }
 
 .action-update,
 .command-launcher-badge.action-update {
-  background: #a85572;
-  color: #ffffff;
+    background: var(--action-update-bg);
+    color: #ffffff;
+}
+
+.action-update:hover,
+.command-launcher-badge.action-update:hover {
+    background: var(--action-update-hover-bg);
+    color: #fff7fb;
 }
 
 .action-shell,
 .command-launcher-badge.action-shell {
-  background: #6d4aa8;
-  color: #f3e8ff;
+    background: #6d4aa8;
+    color: #f3e8ff;
 }
-/* End action color role overrides */
-
-.about-page {
-  min-height: 100vh;
-  background: var(--table-head-hover);
-  color: var(--content);
-}
-
-.about-hero {
-  background: var(--panel);
-  border-bottom: 1px solid var(--line);
-  padding: 2rem;
-  display: flex;
-  justify-content: space-between;
-  gap: 2rem;
-}
-
-.about-hero h1 {
-  margin: 0;
-  font-size: 2.2rem;
-}
-
-.about-hero p {
-  color: var(--muted);
-  margin: 0.5rem 0 0;
-}
-
-.about-back {
-  display: inline-block;
-  margin-bottom: 1rem;
-  color: var(--accent);
-  text-decoration: none;
-  font-weight: 700;
-}
-
-.about-version-box {
-  min-width: 16rem;
-  align-self: flex-start;
-  font-size: 0.85rem;
-}
-
-.about-content {
-  max-width: 70rem;
-  margin: 0 auto;
-  padding: 2rem;
-}
-
-.about-content section {
-  background: var(--table-bg);
-  border: 1px solid var(--line);
-  border-radius: 0.9rem;
-  padding: 2rem;
-  margin-bottom: 2rem;
-}
-
-.about-content h2 {
-  margin-top: 0;
-  font-size: 1.8rem;
-}
-
-.about-content h3 {
-  margin-top: 2rem;
-  color: var(--content);
-}
-
-.about-content p,
-.about-content li {
-  color: var(--table-text);
-  line-height: 1.65;
-}
-
-.about-content code {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 0.25rem;
-  padding: 0.08rem 0.25rem;
-}
-
-.about-content pre {
-  overflow-x: auto;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 0.6rem;
-  padding: 1rem;
-}
-
-.about-content pre code {
-  background: transparent;
-  border: 0;
-  padding: 0;
-}
-
-@media (max-width: 800px) {
-  .about-hero {
-    display: block;
-  }
-
-  .about-version-box {
-    margin-top: 1.5rem;
-    min-width: 0;
-  }
-
-  .about-content {
-    padding: 1rem;
-  }
-
-  .about-content section {
-    padding: 1.25rem;
-  }
-}
-
-/* Top metadata box alignment */
-.meta {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.75rem;
-}
-
-.meta .meta-box {
-  text-align: left;
-}
-
-/* Keep top metadata visually integrated with the page header. */
-.top .meta-box,
-:root[data-theme] .top .meta-box {
-  background: transparent;
-  border-color: transparent;
-  box-shadow: none;
-  padding: 0;
-}
-
-
-.meta-box-compact {
-  min-width: 24rem;
-}
-
-.meta-box-compact .meta-row {
-  grid-template-columns: 5rem 1fr;
-}
-
-.meta-box-compact .meta-row span {
-  text-align: left;
-}
-
-.meta-box-compact .meta-row strong {
-  text-align: right;
-}
-
-/* Top metadata compact layout */
-.meta {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.55rem;
-}
-
-.meta .meta-box-compact {
-  min-width: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-}
-
-.meta .meta-box-compact {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.16rem;
-}
-
-.meta .meta-box-compact .meta-row {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.45rem;
-  color: var(--muted);
-  white-space: nowrap;
-}
-
-.meta .meta-box-compact .meta-row + .meta-row {
-  margin-top: 0;
-}
-
-.meta .meta-box-compact .meta-row span::after {
-  content: ":";
-}
-
-.meta .meta-box-compact .meta-row strong {
-  color: var(--content);
-  font-weight: 700;
-  text-align: right;
-}
-/* End top metadata compact layout */
-
-/* About page dashboard layout */
-.about-content-shell {
-  overflow: auto;
-}
-
-.about-content-shell .about-content {
-  max-width: 70rem;
-  margin: 0 auto;
-  padding: 2rem;
-}
-
-.sidebar-tool-link.active {
-  color: var(--accent);
-  font-weight: 700;
-}
-
-.about-content section {
-  border-left: 3px solid var(--accent);
-}
-/* End about page dashboard layout */
-
-/* Keep dashboard frame fixed on about page */
-.about-content-shell {
-  height: calc(100vh - 150px);
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-.about-content-shell .about-content {
-  min-height: 100%;
-}
-/* End fixed about page frame */
-
-/* Fixed app frame */
-html,
-body {
-  height: 100%;
-  overflow: hidden;
-}
-
-.app {
-  height: 100vh;
-  min-height: 0;
-}
-
-.brand,
-.top,
-.sidebar,
-.content {
-  min-height: 0;
-}
-
-.sidebar {
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-.content {
-  overflow: auto;
-}
-/* End fixed app frame */
-
-/* V2 about modal */
-.about-modal[hidden] {
-  display: none;
-}
-
-.about-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-}
-
-.about-modal-backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.58);
-  backdrop-filter: blur(2px);
-}
-
-.about-modal-panel {
-  position: absolute;
-  inset: 5vh 50%;
-  transform: translateX(-50%);
-  width: min(74rem, calc(100vw - 4rem));
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  background: var(--table-bg);
-  color: var(--table-text);
-  border: 1px solid var(--line);
-  border-radius: 1rem;
-  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
-  overflow: hidden;
-}
-
-.about-modal-header {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid var(--line);
-  background: var(--table-head);
-}
-
-.about-modal-header h2 {
-  margin: 0;
-  font-size: 1.45rem;
-}
-
-.about-modal-header p {
-  margin: 0.35rem 0 0;
-  color: var(--muted);
-}
-
-.about-modal-close {
-  border: 1px solid var(--line);
-  background: var(--panel);
-  color: var(--content);
-  border-radius: 999px;
-  width: 2rem;
-  height: 2rem;
-  font-size: 1.25rem;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.about-modal-content {
-  flex: 1 1 auto;
-  overflow: auto;
-  padding: 1.5rem;
-}
-
-.about-card {
-  max-width: 64rem;
-  margin: 0 auto;
-  border-left: 0;
-  background: var(--table-bg);
-  border-radius: 0.75rem;
-  padding: 1.25rem 1.4rem;
-}
-
-.about-card h3 {
-  margin-top: 0;
-}
-
-.about-action-samples {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  margin: 1rem 0;
-}
-/* End V2 about modal */
-
-/* V2 sidebar panels and copy rows */
-.app-v2 .sidebar-tools-title-spaced {
-  margin-top: 1rem;
-}
-
-.app-v2 .copy-command-panel,
-.app-v2 .sidebar-panel {
-  width: 100%;
-  box-sizing: border-box;
-  border: 1px solid var(--line);
-  border-radius: 0.75rem;
-  background: var(--table-bg);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
-  overflow: hidden;
-}
-
-.app-v2 .copy-command {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 100%;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.65rem;
-  margin: 0;
-  padding: 0.42rem 0.5rem;
-  border: 0;
-  border-bottom: 1px solid var(--line);
-  border-radius: 0;
-  background: transparent;
-  color: var(--content);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.app-v2 .copy-command:last-child {
-  border-bottom: 0;
-}
-
-.app-v2 .copy-command:hover {
-  background: var(--table-head-hover);
-}
-
-.app-v2 .copy-command:focus {
-  outline: none;
-}
-
-.app-v2 .copy-command:focus-visible {
-  outline: 1px solid var(--accent);
-  outline-offset: -1px;
-}
-
-.app-v2 .copy-command-label {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--content);
-  font-size: 0.78rem;
-  line-height: 1.2;
-}
-
-.app-v2 .sidebar-version-panel {
-  padding: 0.55rem 0.65rem;
-  font-size: 0.78rem;
-}
-
-.app-v2 .sidebar-version-panel .meta-row {
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.65rem;
-}
-
-.app-v2 .sidebar-version-panel .meta-row + .meta-row {
-  margin-top: 0.18rem;
-}
-
-.app-v2 .sidebar-version-panel .meta-row span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-align: left;
-}
-
-.app-v2 .sidebar-version-panel .meta-row strong {
-  text-align: right;
-}
-/* End V2 sidebar panels and copy rows */
-
-/* V2 compact controls */
-:root {
-  --control-radius: 0.45rem;
-  --control-padding-y: 0.28rem;
-  --control-padding-x: 0.55rem;
-  --control-font-size: 0.76rem;
-  --control-line-height: 1.2;
-}
-
-.app-v2 .theme-button,
-.app-v2 .action,
-.command-launcher-badge,
-.app-v2 .copy-command-button,
-.about-modal .action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 1.72rem;
-  padding: var(--control-padding-y) var(--control-padding-x);
-  border-radius: var(--control-radius);
-  font-size: var(--control-font-size);
-  font-weight: 700;
-  line-height: var(--control-line-height);
-  text-decoration: none;
-  white-space: nowrap;
-  box-sizing: border-box;
-}
-
-.app-v2 .theme-switcher {
-  gap: 0.35rem;
-}
-
-.app-v2 .theme-button {
-  border-radius: var(--control-radius);
-}
-
-.app-v2 .action {
-  margin: 0 0.25rem 0.2rem 0;
-}
-
-.app-v2 .actions-col .action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.command-launcher-badge,
-.app-v2 .copy-command-button {
-  min-width: 3.5rem;
-}
-
-.app-v2 .copy-command-button {
-  border: 1px solid var(--line);
-  background: var(--panel);
-  color: var(--content);
-}
-
-.app-v2 .copy-command:hover .copy-command-button {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #ffffff;
-}
-/* End V2 compact controls */
-
-/* V2 modal and launcher polish */
-.command-launcher-panel,
-.about-modal-panel {
-  border-color: var(--line);
-  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
-}
-
-.command-launcher-item.selected {
-  border-color: var(--accent);
-}
-/* End V2 modal and launcher polish */
-
-/* Theme: Dust Dark */
-:root[data-theme="dust-dark"] {
-  --bg: #1b171d;
-  --panel: #241f27;
-  --panel-2: #2d2630;
-  --content: #f2e9ee;
-  --text: #f2e9ee;
-  --muted: #c7b5bf;
-  --accent: #a85572;
-  --accent-hover: #c06c86;
-  --line: #2e2930;
-  --border: #2e2930;
-  --danger: #f87171;
-
-  --table-bg: #261f28;
-  --table-head: #3a303d;
-  --table-head-hover: #473949;
-  --table-row: #1b171d;
-  --table-row-hover: #312834;
-  --table-text: #f2e9ee;
-  --table-muted: #c7b5bf;
-}
-
-:root[data-theme="dust-dark"] body {
-  background: #1b171d;
-}
-
-:root[data-theme="dust-dark"] .brand {
-  background: #18151b;
-}
-
-:root[data-theme="dust-dark"] .sidebar {
-  background: #221d25;
-}
-
-:root[data-theme="dust-dark"] .top {
-  background: #211b23;
-}
-
-:root[data-theme="dust-dark"] .content {
-  background: #1b171d;
-}
-
-:root[data-theme="dust-dark"] .filter,
-:root[data-theme="dust-dark"] .table-wrap,
-:root[data-theme="dust-dark"] .copy-command-panel,
-:root[data-theme="dust-dark"] .sidebar-panel,
-:root[data-theme="dust-dark"] .command-launcher-panel,
-:root[data-theme="dust-dark"] .about-modal-panel {
-  background: #261f28;
-  border-color: #2e2930;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.42);
-}
-
-:root[data-theme="dust-dark"] th,
-:root[data-theme="dust-dark"] .table-wrap thead {
-  background: #3a303d;
-}
-
-:root[data-theme="dust-dark"] .meta-box,
-:root[data-theme="dust-dark"] .table-tools,
-:root[data-theme="dust-dark"] .about-modal-header {
-  background: #2d2630;
-}
-
-:root[data-theme="dust-dark"] .instance,
-:root[data-theme="dust-dark"] .sidebar-tool-link {
-  color: #c06c86;
-}
-
-:root[data-theme="dust-dark"] .nav-item.active,
-:root[data-theme="dust-dark"] .theme-button.active {
-  background: #c06c86;
-  border-color: #c06c86;
-  color: #ffffff;
-}
-
-:root[data-theme="dust-dark"] .theme-button {
-  border-color: #5b4858;
-  background: #241f27;
-  color: #eadde4;
-}
-
-:root[data-theme="dust-dark"] .theme-button:hover {
-  background: #332934;
-}
-
-:root[data-theme="dust-dark"] input,
-:root[data-theme="dust-dark"] .command-launcher-input {
-  background: #211b22;
-  color: #f2e9ee;
-  border-color: #574552;
-}
-
-:root[data-theme="dust-dark"] input::placeholder,
-:root[data-theme="dust-dark"] .command-launcher-input::placeholder {
-  color: #b9a7b1;
-}
-
-:root[data-theme="dust-dark"] .filter input,
-:root[data-theme="dust-dark"] #table-filter {
-  background: #463342;
-  border-color: #8a647c;
-  color: #fff7fb;
-  box-shadow: inset 0 0 0 1px rgba(192, 108, 134, 0.18);
-}
-
-:root[data-theme="dust-dark"] .filter input::placeholder,
-:root[data-theme="dust-dark"] #table-filter::placeholder {
-  color: #ead0dc;
-}
-
-:root[data-theme="dust-dark"] .filter input:focus,
-:root[data-theme="dust-dark"] #table-filter:focus {
-  border-color: #c06c86;
-  box-shadow: 0 0 0 2px rgba(192, 108, 134, 0.18), inset 0 0 0 1px rgba(192, 108, 134, 0.22);
-}
-
-:root[data-theme="dust-dark"] .brand,
-:root[data-theme="dust-dark"] .top,
-:root[data-theme="dust-dark"] .sidebar,
-:root[data-theme="dust-dark"] .content,
-:root[data-theme="dust-dark"] .meta-box,
-:root[data-theme="dust-dark"] td,
-:root[data-theme="dust-dark"] th,
-:root[data-theme="dust-dark"] .copy-command,
-:root[data-theme="dust-dark"] .sidebar-tools {
-  border-color: #2e2930;
-}
-/* End theme: Dust Dark */
-
-/* Theme: Rosé Pine Moon */
-:root[data-theme="rose-pine-moon"] {
-  --bg: #191724;
-  --panel: #211f30;
-  --panel-2: #2f2b45;
-  --content: #e0def4;
-  --text: #e0def4;
-  --muted: #908caa;
-  --accent: #ebbcba;
-  --accent-hover: #f6c6c4;
-  --line: #4a465f;
-  --border: #4a465f;
-  --danger: #eb6f92;
-
-  --table-bg: #191724;
-  --table-head: #312d49;
-  --table-head-hover: #3a3554;
-  --table-row: #191724;
-  --table-row-hover: #242135;
-  --table-text: #e0def4;
-  --table-muted: #908caa;
-}
-
-:root[data-theme="rose-pine-moon"] body {
-  background: #26233a;
-}
-
-:root[data-theme="rose-pine-moon"] .brand {
-  background: #191724;
-}
-
-:root[data-theme="rose-pine-moon"] .top {
-  background: #211f30;
-}
-
-:root[data-theme="rose-pine-moon"] .sidebar {
-  background: #2a273f;
-}
-
-:root[data-theme="rose-pine-moon"] .instance,
-:root[data-theme="rose-pine-moon"] .sidebar-tool-link,
-:root[data-theme="rose-pine-moon"] .meta strong {
-  color: #ebbcba;
-}
-
-:root[data-theme="rose-pine-moon"] .nav-item {
-  border: 1px solid transparent;
-}
-
-:root[data-theme="rose-pine-moon"] .nav-item.active,
-:root[data-theme="rose-pine-moon"] .theme-button.active {
-  background: #403d52;
-  border-color: #ebbcba;
-  color: #ebbcba;
-  box-shadow: inset 0 0 0 1px rgba(235, 188, 186, 0.18);
-}
-
-:root[data-theme="rose-pine-moon"] .nav-item.active:hover,
-:root[data-theme="rose-pine-moon"] .theme-button.active:hover {
-  background: #4a465f;
-  border-color: #f6c6c4;
-  color: #f6c6c4;
-  box-shadow: inset 0 0 0 1px rgba(246, 198, 196, 0.22);
-}
-
-:root[data-theme="rose-pine-moon"] .theme-button {
-  border-color: #4a465f;
-  background: #1f1d2e;
-  color: #e0def4;
-}
-
-:root[data-theme="rose-pine-moon"] .theme-button:hover {
-  background: #26233a;
-}
-
-:root[data-theme="rose-pine-moon"] .filter,
-:root[data-theme="rose-pine-moon"] .table-wrap,
-:root[data-theme="rose-pine-moon"] .copy-command-panel,
-:root[data-theme="rose-pine-moon"] .sidebar-panel,
-:root[data-theme="rose-pine-moon"] .command-launcher-panel,
-:root[data-theme="rose-pine-moon"] .about-modal-panel {
-  background: #211f30;
-  border-color: #4a465f;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.40);
-}
-
-:root[data-theme="rose-pine-moon"] th,
-:root[data-theme="rose-pine-moon"] .table-wrap thead {
-  background: #312d49;
-}
-
-:root[data-theme="rose-pine-moon"] tr:hover td,
-:root[data-theme="rose-pine-moon"] .copy-command:hover {
-  background: #242135;
-}
-
-:root[data-theme="rose-pine-moon"] .copy-command:hover .copy-command-button {
-  background: #403d52;
-  border-color: #ebbcba;
-  color: #ebbcba;
-}
-
-:root[data-theme="rose-pine-moon"] input,
-:root[data-theme="rose-pine-moon"] .command-launcher-input {
-  background: #191724;
-  color: #e0def4;
-  border-color: #4a465f;
-}
-
-:root[data-theme="rose-pine-moon"] input::placeholder,
-:root[data-theme="rose-pine-moon"] .command-launcher-input::placeholder {
-  color: #908caa;
-}
-
-:root[data-theme="rose-pine-moon"] .filter input,
-:root[data-theme="rose-pine-moon"] #table-filter {
-  background: #2f2b45;
-  border-color: #6e6a86;
-  color: #f2eefe;
-  box-shadow: inset 0 0 0 1px rgba(235, 188, 186, 0.12);
-}
-
-:root[data-theme="rose-pine-moon"] .filter input::placeholder,
-:root[data-theme="rose-pine-moon"] #table-filter::placeholder {
-  color: #b9b3cf;
-}
-
-:root[data-theme="rose-pine-moon"] .filter input:focus,
-:root[data-theme="rose-pine-moon"] #table-filter:focus {
-  border-color: #ebbcba;
-  box-shadow: 0 0 0 2px rgba(235, 188, 186, 0.16), inset 0 0 0 1px rgba(235, 188, 186, 0.18);
-}
-
-:root[data-theme="rose-pine-moon"] .action-update,
-:root[data-theme="rose-pine-moon"] .command-launcher-badge.action-update {
-  background: #b4637a;
-  color: #fff7fb;
-}
-
-:root[data-theme="rose-pine-moon"] .action-update:hover {
-  background: #c76d88;
-  color: #fff7fb;
-}
-/* End theme: Rosé Pine Moon */
-
-/* Theme: Rosé Pine */
-:root[data-theme="rose-pine"] {
-  --bg: #191724;
-  --panel: #1f1d2e;
-  --panel-2: #26233a;
-  --content: #e0def4;
-  --text: #e0def4;
-  --muted: #908caa;
-  --accent: #ebbcba;
-  --accent-hover: #f6c6c4;
-  --line: #2c2938;
-  --border: #2c2938;
-  --danger: #eb6f92;
-
-  --table-bg: #211f30;
-  --table-head: #2a273f;
-  --table-head-hover: #383250;
-  --table-row: #211f30;
-  --table-row-hover: #29263a;
-  --table-text: #e0def4;
-  --table-muted: #908caa;
-}
-
-:root[data-theme="rose-pine"] body {
-  background: #191724;
-}
-
-:root[data-theme="rose-pine"] .brand {
-  background: #15121f;
-}
-
-:root[data-theme="rose-pine"] .sidebar,
-:root[data-theme="rose-pine"] .top {
-  background: #1b1827;
-}
-
-:root[data-theme="rose-pine"] .content {
-  background: #171521;
-}
-
-:root[data-theme="rose-pine"] .filter,
-:root[data-theme="rose-pine"] .table-wrap {
-  background: #211f30;
-}
-
-:root[data-theme="rose-pine"] .copy-command-panel,
-:root[data-theme="rose-pine"] .sidebar-panel,
-:root[data-theme="rose-pine"] .command-launcher-panel,
-:root[data-theme="rose-pine"] .about-modal-panel {
-  background: #1f1d2e;
-}
-
-:root[data-theme="rose-pine"] .filter,
-:root[data-theme="rose-pine"] .table-wrap,
-:root[data-theme="rose-pine"] .copy-command-panel,
-:root[data-theme="rose-pine"] .sidebar-panel,
-:root[data-theme="rose-pine"] .meta-box,
-:root[data-theme="rose-pine"] .about-modal-panel,
-:root[data-theme="rose-pine"] .command-launcher-panel {
-  border-color: #2c2938;
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.48);
-}
-
-:root[data-theme="rose-pine"] .about-modal-header,
-:root[data-theme="rose-pine"] th,
-:root[data-theme="rose-pine"] .table-wrap thead {
-  background: #2a273f;
-}
-
-:root[data-theme="rose-pine"] td {
-  background: #211f30;
-}
-
-:root[data-theme="rose-pine"] tr:hover td,
-:root[data-theme="rose-pine"] .copy-command:hover {
-  background: #29263a;
-}
-
-:root[data-theme="rose-pine"] .instance,
-:root[data-theme="rose-pine"] .sidebar-tool-link,
-:root[data-theme="rose-pine"] .meta strong {
-  color: #ebbcba;
-}
-
-:root[data-theme="rose-pine"] .nav-item,
-:root[data-theme="rose-pine"] .theme-button {
-  border: 1px solid transparent;
-}
-
-:root[data-theme="rose-pine"] .nav-item.active,
-:root[data-theme="rose-pine"] .theme-button.active,
-:root[data-theme="rose-pine"] .copy-command:hover .copy-command-button {
-  background: #2f2a45;
-  border-color: #ea9a97;
-  color: #f2d6d4;
-  box-shadow: inset 0 0 0 1px rgba(234, 154, 151, 0.18);
-}
-
-:root[data-theme="rose-pine"] .nav-item.active:hover,
-:root[data-theme="rose-pine"] .theme-button.active:hover,
-:root[data-theme="rose-pine"] .copy-command:hover .copy-command-button:hover {
-  background: #383250;
-  border-color: #f2b8b5;
-  color: #f6deda;
-}
-
-:root[data-theme="rose-pine"] .theme-button {
-  background: #1f1d2e;
-  border-color: #403d52;
-  color: #e0def4;
-}
-
-:root[data-theme="rose-pine"] .theme-button:hover {
-  background: #26233a;
-  border-color: #6e6a86;
-}
-
-:root[data-theme="rose-pine"] .copy-command-button {
-  background: #211f30;
-  border-color: #403d52;
-  color: #e0def4;
-}
-
-:root[data-theme="rose-pine"] input,
-:root[data-theme="rose-pine"] .command-launcher-input {
-  background: #191724;
-  color: #e0def4;
-  border-color: #403d52;
-}
-
-:root[data-theme="rose-pine"] input::placeholder,
-:root[data-theme="rose-pine"] .command-launcher-input::placeholder {
-  color: #908caa;
-}
-
-:root[data-theme="rose-pine"] .filter input,
-:root[data-theme="rose-pine"] #table-filter {
-  background: #2f2a45;
-  border-color: #ea9a97;
-  color: #f2d6d4;
-  box-shadow: inset 0 0 0 1px rgba(234, 154, 151, 0.16);
-}
-
-:root[data-theme="rose-pine"] .filter input::placeholder,
-:root[data-theme="rose-pine"] #table-filter::placeholder {
-  color: #c4b7d8;
-}
-
-:root[data-theme="rose-pine"] .filter input:focus,
-:root[data-theme="rose-pine"] #table-filter:focus {
-  border-color: #f2b8b5;
-  box-shadow: 0 0 0 1px rgba(242, 184, 181, 0.28), inset 0 0 0 1px rgba(242, 184, 181, 0.18);
-}
-
-:root[data-theme="rose-pine"] .action-update,
-:root[data-theme="rose-pine"] .command-launcher-badge.action-update {
-  background: #b4637a;
-  color: #fff7fb;
-}
-
-:root[data-theme="rose-pine"] .action-update:hover {
-  background: #c76d88;
-  color: #fff7fb;
-}
-
-:root[data-theme="rose-pine"] .command-launcher-item.selected {
-  background: #2a273f;
-  border-color: #ebbcba;
-  color: #f2d6d4;
-}
-
-:root[data-theme="rose-pine"] .about-card {
-  background: #171521;
-  border-color: #2f2a40;
-}
-
-:root[data-theme="rose-pine"] .brand,
-:root[data-theme="rose-pine"] .top,
-:root[data-theme="rose-pine"] .sidebar,
-:root[data-theme="rose-pine"] .content,
-:root[data-theme="rose-pine"] td,
-:root[data-theme="rose-pine"] th,
-:root[data-theme="rose-pine"] .copy-command,
-:root[data-theme="rose-pine"] .sidebar-tools {
-  border-color: #2c2938;
-}
-/* End theme: Rosé Pine */
 
 .action-agent-update,
 .command-launcher-badge.action-agent-update {
@@ -1851,26 +1138,254 @@ body {
     color: #ffffff;
 }
 
-button.action {
-    appearance: none;
-    -webkit-appearance: none;
+
+/* =============================================================================
+ * 9. COMPACT CONTROLS (sizing) + THEME SWITCH + COPY COMMAND
+ * -----------------------------------------------------------------------------
+ * NOTE: --control-radius / --control-padding-* / --control-font-size below are
+ * the SIZING token family (pill geometry) — distinct from the --control-bg /
+ * --control-border COLOR family used by the filter/search component in §7.
+ * ========================================================================== */
+.theme-switcher {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.theme-switcher span {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.theme-button {
+    border: 1px solid var(--theme-button-border);
+    background: var(--theme-button-bg);
+    color: var(--theme-button-text);
+    border-radius: 999px;
+    padding: 3px 8px;
     font: inherit;
+    font-size: 12px;
     cursor: pointer;
 }
 
-.action-pve:hover,
-.action-pbs:hover,
-.action-pmg:hover,
-.action-pdm:hover,
-.command-launcher-badge.action-pve:hover,
-.command-launcher-badge.action-pbs:hover,
-.command-launcher-badge.action-pmg:hover,
-.command-launcher-badge.action-pdm:hover {
-    background: #b85b00;
-    color: #ffffff;
+.theme-button:hover {
+    background: var(--theme-button-hover-bg);
+    border-color: var(--theme-button-hover-border);
 }
 
-/* ── Enrollment approvals view ──────────────────────────────────────────── */
+.theme-button.active {
+    background: var(--sidebar-active-bg);
+    border-color: var(--sidebar-active-border);
+    color: var(--sidebar-active-text);
+    box-shadow: var(--sidebar-active-shadow);
+    font-weight: 700;
+}
+
+.theme-button.active:hover {
+    background: var(--sidebar-active-hover-bg);
+    border-color: var(--sidebar-active-hover-border);
+    color: var(--sidebar-active-hover-text);
+    box-shadow: var(--sidebar-active-hover-shadow);
+}
+
+/* Copy-command rows (sidebar) */
+.copy-command {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px;
+    border-radius: 8px;
+}
+
+.copy-command:hover {
+    background: var(--copy-hover-bg);
+}
+
+.copy-command-label {
+    color: var(--content);
+    font-size: 12px;
+    line-height: 1.25;
+}
+
+.copy-command-button {
+    border: 1px solid var(--copy-button-border);
+    background: var(--copy-button-bg);
+    color: var(--copy-button-text);
+    border-radius: 999px;
+    padding: 3px 8px;
+    font: inherit;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.copy-command-button:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/* Compact pill geometry shared by buttons/badges (V2). */
+.app-v2 .theme-button,
+.app-v2 .action,
+.command-launcher-badge,
+.app-v2 .copy-command-button,
+.about-modal .action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 1.72rem;
+    padding: var(--control-padding-y) var(--control-padding-x);
+    border-radius: var(--control-radius);
+    font-size: var(--control-font-size);
+    font-weight: 700;
+    line-height: var(--control-line-height);
+    text-decoration: none;
+    white-space: nowrap;
+    box-sizing: border-box;
+}
+
+.app-v2 .theme-switcher {
+    gap: 0.35rem;
+}
+
+.app-v2 .theme-button {
+    border-radius: var(--control-radius);
+}
+
+.app-v2 .action {
+    margin: 0 0.25rem 0.2rem 0;
+}
+
+.app-v2 .actions-col .action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.command-launcher-badge,
+.app-v2 .copy-command-button {
+    min-width: 3.5rem;
+}
+
+/* V2 sidebar panels (copy + version). */
+.app-v2 .sidebar-tools-title-spaced {
+    margin-top: 1rem;
+}
+
+.app-v2 .copy-command-panel,
+.app-v2 .sidebar-panel {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--line);
+    border-radius: 0.75rem;
+    background: var(--surface-panel-bg);
+    box-shadow: var(--sidebar-panel-shadow);
+    overflow: hidden;
+}
+
+.app-v2 .copy-command {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.65rem;
+    margin: 0;
+    padding: 0.42rem 0.5rem;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    border-radius: 0;
+    background: transparent;
+    color: var(--content);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.app-v2 .copy-command:last-child {
+    border-bottom: 0;
+}
+
+.app-v2 .copy-command:hover {
+    background: var(--copy-hover-bg);
+}
+
+.app-v2 .copy-command:focus {
+    outline: none;
+}
+
+.app-v2 .copy-command:focus-visible {
+    outline: 1px solid var(--accent);
+    outline-offset: -1px;
+}
+
+.app-v2 .copy-command-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--content);
+    font-size: 0.78rem;
+    line-height: 1.2;
+}
+
+.app-v2 .copy-command-button {
+    border: 1px solid var(--copy-button-border);
+    background: var(--copy-button-bg);
+    color: var(--copy-button-text);
+}
+
+/* Copy-button hover mirrors the active "pill" look across all themes. */
+.app-v2 .copy-command:hover .copy-command-button {
+    background: var(--sidebar-active-bg);
+    border-color: var(--sidebar-active-border);
+    color: var(--sidebar-active-text);
+}
+
+.app-v2 .sidebar-version-panel {
+    padding: 0.55rem 0.65rem;
+    font-size: 0.78rem;
+}
+
+.app-v2 .sidebar-version-panel .meta-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.65rem;
+}
+
+.app-v2 .sidebar-version-panel .meta-row + .meta-row {
+    margin-top: 0.18rem;
+}
+
+.app-v2 .sidebar-version-panel .meta-row span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: left;
+}
+
+.app-v2 .sidebar-version-panel .meta-row strong {
+    text-align: right;
+}
+
+
+/* =============================================================================
+ * 10. CARDS / ENROLLMENT / AGENT AUTH
+ * ========================================================================== */
+.error,
+.empty {
+    background: var(--table-bg);
+    border-radius: 10px;
+    padding: 18px;
+    border: 1px solid var(--line);
+}
+
+.error {
+    color: var(--danger);
+}
 
 .enrollment-list {
     display: flex;
@@ -1885,20 +1400,20 @@ button.action {
 }
 
 .enrollment-flash-success {
-    background: color-mix(in srgb, #22c55e 12%, var(--panel));
+    background: color-mix(in srgb, var(--status-success) 12%, var(--panel));
     color: var(--content);
-    border: 1px solid #22c55e;
+    border: 1px solid var(--status-success);
 }
 
 .enrollment-flash-warning {
-    background: color-mix(in srgb, #f59e0b 12%, var(--panel));
+    background: color-mix(in srgb, var(--status-warning) 12%, var(--panel));
     color: var(--content);
-    border: 1px solid #f59e0b;
+    border: 1px solid var(--status-warning);
 }
 
 .enrollment-card {
-    background: var(--panel);
-    border: 1px solid var(--line);
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
     border-radius: 6px;
     box-shadow: 0 8px 24px var(--shadow);
     padding: 1rem 1.25rem;
@@ -1914,7 +1429,7 @@ button.action {
 }
 
 .enrollment-card.enrollment-highlight {
-    border-color: var(--accent);
+    border-color: var(--card-highlight-border);
     box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
@@ -1939,20 +1454,20 @@ button.action {
 }
 
 .enrollment-badge-pending {
-    background: var(--accent-soft);
-    color: var(--accent);
+    background: var(--badge-pending-bg);
+    color: var(--badge-pending-text);
 }
 
 .enrollment-badge-expired {
-    background: rgba(100, 116, 139, 0.2);
-    color: var(--muted);
+    background: var(--badge-expired-bg);
+    color: var(--badge-expired-text);
 }
 
 .enrollment-pairing-row {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    background: var(--panel-2);
+    background: var(--panel-2-bg);
     border: 1px solid var(--line);
     border-radius: 4px;
     padding: 0.5rem 0.875rem;
@@ -2039,7 +1554,7 @@ button.action {
 }
 
 .enrollment-btn-approve {
-    background: #22c55e;
+    background: var(--status-success);
     color: #fff;
 }
 
@@ -2048,8 +1563,284 @@ button.action {
     color: #fff;
 }
 
-/* ── About modal: Not boring preference ──────────────────────────────────── */
 
+/* =============================================================================
+ * 11. COMMAND LAUNCHER
+ * ========================================================================== */
+.command-launcher[hidden] {
+    display: none;
+}
+
+.command-launcher {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+}
+
+.command-launcher-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.62);
+    backdrop-filter: blur(4px);
+}
+
+.command-launcher-panel {
+    position: relative;
+    width: min(760px, calc(100vw - 32px));
+    margin: 9vh auto 0;
+    background: var(--surface-panel-bg);
+    color: var(--table-text);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: var(--modal-shadow);
+    overflow: hidden;
+}
+
+.command-launcher-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel-bg);
+}
+
+.command-launcher-prefix {
+    border: 1px solid var(--line);
+    background: var(--panel-2-bg);
+    color: var(--muted);
+    border-radius: 8px;
+    padding: 5px 8px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.command-launcher-input {
+    width: 100%;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--content);
+    font: inherit;
+    font-size: 20px;
+}
+
+.command-launcher-input::placeholder {
+    color: var(--muted);
+}
+
+.command-launcher-results {
+    max-height: 58vh;
+    overflow: auto;
+    padding: 8px;
+}
+
+.command-launcher-item {
+    width: 100%;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--table-text);
+    display: block;
+    text-align: left;
+    padding: 10px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    font: inherit;
+}
+
+.command-launcher-item:hover,
+.command-launcher-item.selected {
+    background: var(--launcher-selected-bg);
+    border-color: var(--launcher-selected-border);
+    color: var(--launcher-selected-text);
+}
+
+.command-launcher-item-title {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-weight: 800;
+    font-size: 14px;
+}
+
+.command-launcher-item-subtitle {
+    color: var(--table-muted);
+    font-size: 12px;
+    margin-top: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.command-launcher-title-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.command-launcher-empty {
+    color: var(--table-muted);
+    padding: 18px 12px;
+    text-align: center;
+}
+
+.command-launcher-help {
+    border-top: 1px solid var(--line);
+    color: var(--table-muted);
+    font-size: 12px;
+    padding: 9px 14px;
+    background: var(--panel-bg);
+}
+
+.command-launcher-badge {
+    display: inline-block;
+    flex: 0 0 auto;
+    margin: 0;
+    padding: 4px 7px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--button-action-text);
+    background: var(--button-action-bg);
+    white-space: nowrap;
+}
+
+
+/* =============================================================================
+ * 12. ABOUT MODAL + ABOUT PAGE
+ * ========================================================================== */
+.about-modal[hidden] {
+    display: none;
+}
+
+.about-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+}
+
+.about-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.58);
+    backdrop-filter: blur(2px);
+}
+
+.about-modal-panel {
+    position: absolute;
+    inset: 5vh 50%;
+    transform: translateX(-50%);
+    width: min(74rem, calc(100vw - 4rem));
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--surface-panel-bg);
+    color: var(--table-text);
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+    box-shadow: var(--modal-shadow);
+    overflow: hidden;
+}
+
+.about-modal-header {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--line);
+    background: var(--modal-header-bg);
+}
+
+.about-modal-header h2 {
+    margin: 0;
+    font-size: 1.45rem;
+}
+
+.about-modal-header p {
+    margin: 0.35rem 0 0;
+    color: var(--muted);
+}
+
+.about-modal-close {
+    border: 1px solid var(--line);
+    background: var(--panel-bg);
+    color: var(--content);
+    border-radius: 999px;
+    width: 2rem;
+    height: 2rem;
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.about-modal-content {
+    flex: 1 1 auto;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: color-mix(in srgb, var(--table-bg) 88%, var(--panel-2-bg));
+}
+
+.about-card {
+    width: 100%;
+    max-width: 64rem;
+    margin: 0 auto;
+    background: var(--about-card-bg);
+    border: 1px solid var(--about-card-border);
+    border-radius: 0.9rem;
+    padding: 1.15rem 1.35rem;
+    box-shadow: 0 8px 24px var(--shadow);
+}
+
+.about-card h3 {
+    margin: 0 0 0.75rem;
+}
+
+.about-card p {
+    margin: 0 0 0.75rem;
+    line-height: 1.55;
+}
+
+.about-card p:last-child,
+.about-card ul:last-child,
+.about-card pre:last-child {
+    margin-bottom: 0;
+}
+
+.about-card ul {
+    margin: 0.25rem 0 0.75rem 1.25rem;
+    padding: 0;
+}
+
+.about-card li {
+    margin: 0.25rem 0;
+    line-height: 1.45;
+}
+
+.about-card pre {
+    margin: 0.75rem 0;
+    padding: 0.75rem;
+    border-radius: 0.65rem;
+    background: color-mix(in srgb, var(--table-bg) 72%, #000);
+    border: 1px solid var(--line);
+    overflow-x: auto;
+}
+
+.about-action-samples {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin: 0.85rem 0 0;
+}
+
+/* About modal "Not boring" preference */
 .about-pref-row {
     margin-top: 0.75em;
 }
@@ -2075,72 +1866,222 @@ button.action {
 .about-pref-hint {
     display: block;
     margin-top: 0.2em;
+    min-height: 2.9em;       /* keep modal height stable */
     font-size: 0.73rem;
     color: var(--muted);
     line-height: 1.45;
 }
 
-/* About modal card layout polish */
-.about-modal-content {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 1.5rem;
-  background: color-mix(in srgb, var(--table-bg) 88%, var(--panel-2));
+/* Standalone about page (full-page variant). */
+.about-page {
+    min-height: 100vh;
+    background: var(--app-bg);
+    color: var(--content);
 }
 
-.about-card {
-  width: 100%;
-  max-width: 64rem;
-  margin: 0 auto;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 0.9rem;
-  padding: 1.15rem 1.35rem;
-  box-shadow: 0 8px 24px var(--shadow);
+.about-hero {
+    background: var(--panel-bg);
+    border-bottom: 1px solid var(--line);
+    padding: 2rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 2rem;
 }
 
-.about-card h3 {
-  margin: 0 0 0.75rem;
+.about-hero h1 {
+    margin: 0;
+    font-size: 2.2rem;
 }
 
-.about-card p {
-  margin: 0 0 0.75rem;
-  line-height: 1.55;
+.about-hero p {
+    color: var(--muted);
+    margin: 0.5rem 0 0;
 }
 
-.about-card p:last-child,
-.about-card ul:last-child,
-.about-card pre:last-child {
-  margin-bottom: 0;
+.about-back {
+    display: inline-block;
+    margin-bottom: 1rem;
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 700;
 }
 
-.about-card ul {
-  margin: 0.25rem 0 0.75rem 1.25rem;
-  padding: 0;
+.about-version-box {
+    min-width: 16rem;
+    align-self: flex-start;
+    font-size: 0.85rem;
 }
 
-.about-card li {
-  margin: 0.25rem 0;
-  line-height: 1.45;
+.about-content-shell {
+    height: calc(100vh - 150px);
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
-.about-card pre {
-  margin: 0.75rem 0;
-  padding: 0.75rem;
-  border-radius: 0.65rem;
-  background: color-mix(in srgb, var(--table-bg) 72%, #000);
-  border: 1px solid var(--line);
-  overflow-x: auto;
+.about-content,
+.about-content-shell .about-content {
+    max-width: 70rem;
+    margin: 0 auto;
+    padding: 2rem;
 }
 
-.about-action-samples {
-  margin: 0.85rem 0 0;
+.about-content-shell .about-content {
+    min-height: 100%;
 }
-/* End about modal card layout polish */
 
-/* Keep About modal preference hint height stable */
-.about-pref-hint {
-  min-height: 2.9em;
+.about-content section {
+    background: var(--table-bg);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    border-radius: 0.9rem;
+    padding: 2rem;
+    margin-bottom: 2rem;
 }
-/* End stable About modal preference hint */
+
+.about-content h2 {
+    margin-top: 0;
+    font-size: 1.8rem;
+}
+
+.about-content h3 {
+    margin-top: 2rem;
+    color: var(--content);
+}
+
+.about-content p,
+.about-content li {
+    color: var(--table-text);
+    line-height: 1.65;
+}
+
+.about-content code {
+    background: var(--panel-bg);
+    border: 1px solid var(--line);
+    border-radius: 0.25rem;
+    padding: 0.08rem 0.25rem;
+}
+
+.about-content pre {
+    overflow-x: auto;
+    background: var(--panel-bg);
+    border: 1px solid var(--line);
+    border-radius: 0.6rem;
+    padding: 1rem;
+}
+
+.about-content pre code {
+    background: transparent;
+    border: 0;
+    padding: 0;
+}
+
+
+/* =============================================================================
+ * 13. PRESENTATION MODES  (local, browser-side — SEPARATE from color themes)
+ * -----------------------------------------------------------------------------
+ * A presentation mode is a *local browser preference*, NOT a server setting and
+ * NOT a color theme. The only one today is "Not boring".
+ *
+ *   storage : localStorage['asscmo.notBoring']  ('true' | 'false')   [existing JS]
+ *   hook    : <html data-not-boring="0|1">       (set by dashboard.js) [existing]
+ *             (equivalently expressible as a data-about-mode attr / About-container
+ *              class — same layer, just a different hook name.)
+ *
+ * Layer contract:
+ *   - COLOR always comes from the active theme tokens (§1/§2).
+ *   - This layer only adds optional DECORATION / EFFECTS / MOTION.
+ *   - Toggling a mode must never redefine theme colors or duplicate a theme block.
+ *   - Individual About sections can opt in later via a data hook
+ *     (e.g. .about-card[data-about-effect="..."]) without touching any theme.
+ *
+ * The effect tokens below default to "off", so the default ("boring") render is
+ * identical to current behavior. The current build adds only JS narration and no
+ * CSS effects, so the mode block is intentionally an inert placeholder — this is
+ * the single, theme-independent place to grow decoration/motion later.
+ * No new JS is required for this scaffold.
+ * ========================================================================== */
+
+/* Presentation-effect tokens — default OFF. NOT color tokens. */
+:root {
+    --fx-motion: none;            /* transition/animation opt-in (e.g. 180ms ease) */
+    --fx-card-decoration: none;   /* decorative flourish layer (e.g. a gradient) */
+    --fx-card-transform: none;    /* subtle transform on hover, etc. */
+}
+
+/*
+ * "Not boring" presentation mode (inert placeholder).
+ * Grow effects HERE — colors stay theme-driven; a per-section tweak changes only
+ * that section's opt-in rule, never a whole theme block. Examples:
+ *
+ *   :root[data-not-boring="1"] { --fx-motion: 180ms ease; }
+ *   :root[data-not-boring="1"] .about-card[data-about-effect="flourish"] {
+ *       background-image: var(--fx-card-decoration);
+ *       transition: transform var(--fx-motion);
+ *   }
+ */
+:root[data-not-boring="1"] {
+    /* No CSS effects enabled yet — preserves current behavior. */
+}
+
+
+/* =============================================================================
+ * 14. RESPONSIVE RULES
+ * ========================================================================== */
+@media (max-width: 900px) {
+    .app {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto 1fr;
+    }
+
+    .brand,
+    .top,
+    .sidebar,
+    .content {
+        grid-column: 1;
+        grid-row: auto;
+    }
+
+    .top {
+        display: block;
+    }
+
+    .meta {
+        margin-top: 16px;
+        text-align: left;
+    }
+}
+
+@media (max-width: 800px) {
+    .about-hero {
+        display: block;
+    }
+
+    .about-version-box {
+        margin-top: 1.5rem;
+        min-width: 0;
+    }
+
+    .about-content {
+        padding: 1rem;
+    }
+
+    .about-content section {
+        padding: 1.25rem;
+    }
+}
+
+
+/* =============================================================================
+ * 15. UTILITIES / LEGACY COMPATIBILITY
+ * -----------------------------------------------------------------------------
+ * Removed vs the original (documented in README.md):
+ *   - Dead `.filter` / `.filter input` theme selectors (no `.filter` element
+ *     exists in the markup; the real markup is `.table-tools > input.filter-input`).
+ *   - Per-theme `#table-filter` / generic `input` overrides — folded into the
+ *     --control-* token set so #table-filter AND #agent-auth-filter share §7.
+ *   - Per-theme `th` / `td` / border-color overrides that merely restated the
+ *     theme's own --table-head / --table-bg / --line tokens.
+ * ========================================================================== */
+.muted {
+    color: var(--table-muted);
+}

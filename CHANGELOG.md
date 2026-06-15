@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Reworked dashboard CSS into a token-driven theme structure and polished filter/search control colors across bundled themes.
 
 ### Added
 - Added an MIT `LICENSE` and a project transparency / AI-assisted note in `README.md`.
