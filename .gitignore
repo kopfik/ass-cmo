@@ -2,6 +2,8 @@
 config.local/.env
 config.local/sites.json
 
+# Local scratch/debug/prototype workspace
+_sandbox/
 
 # Local nginx deployment config
 config.local/nginx/*
