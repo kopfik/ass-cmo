@@ -50,9 +50,8 @@ These items are tracked after the final internal `v0.7.5` pre-public review snap
   - Remaining work is final public-facing review for stale release-gate wording, SECURITY reporting/import notes, and AGENTS public contributor guidance.
 
 - [x] `release-hygiene` Remove private deployment fingerprints from public code and docs.
-  - Remove hardcoded private network mapping such as `10.254.2.` / `vpn-pater`.
-  - Replace private clone URLs and paths such as `gitea.kopfik.org`, `kopfik.org`, `/Docker/ass-cmo`, and `~/git/kopfik.org/ass-cmo`.
-  - Replace private deployment hostnames in public docs/changelog with neutral wording.
+  - Remove hardcoded private network mappings, internal host aliases, private clone URLs, local checkout paths, deployment paths, and private deployment hostnames.
+  - Keep concrete private deployment examples in external handover notes, not in public repository files.
 
 - [x] `release-hygiene` Clean public TODO/release-gate wording before import.
   - Public `TODO.md` must not claim unresolved “must fix before public release” items after the import.
