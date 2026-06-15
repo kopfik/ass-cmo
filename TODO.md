@@ -221,6 +221,33 @@ UX direction: the installer initiates enrollment and the pairing code appears on
 - [ ] `later` Redesign Agent auth view for larger deployments: move from card-per-host layout to a searchable/filterable table with row-level Revoke actions and explicit named host confirmation before revoke. Preserve visibility of auth-health anomalies such as never-authenticated or long-inactive credentials. Current card layout is intentional for the small-fleet v0.8.0 case; this is a post-public scalability improvement.
 - [ ] `later` Light Enrollment approvals UX polish: keep the pairing-code-first card workflow and the prominent pairing code display (visual confirmation is the security intent, not convenience). Consider adding a pending request count or badge and an improved empty state for when no requests are waiting.
 
+---
+
+## Pre-v1.0.0 roadmap
+
+### Grafana / TIM / TIGM / InfluxDB / Telegraf / MQTT overlay deprecation
+
+**Decision:** Grafana, TIM, TIGM, InfluxDB, Telegraf, and MQTT overlays are no longer part of the official ASS-CMO core direction. They were historically useful during development and for home-lab monitoring, but they will not be maintained or advertised as a supported ASS-CMO stack going forward.
+
+The official ASS-CMO core is:
+
+- inventory collection and storage
+- enrollment and per-host agent secrets
+- admin overview dashboard
+- local SSH / RDP / web connection launchers
+
+This is a planned pre-v1.0.0 cleanup item. No immediate code removal is required now.
+
+This supersedes the older "advanced/lab-only until hardened" wording: these overlays are no longer planned as part of the supported core stack.
+
+- [ ] `pre-1.0.0` `cleanup` Update `README.md` to stop presenting Grafana / TIM / TIGM overlays as supported or current ASS-CMO features. Reframe them as historical/optional if mentioned at all.
+- [ ] `pre-1.0.0` `cleanup` Update `INSTALL.md` to remove any guidance that implies the Grafana / TIM / TIGM / InfluxDB / Telegraf / MQTT stack is part of the standard install path.
+- [ ] `pre-1.0.0` `cleanup` Review `.env.example` and remove or clearly mark as optional any variables that exist solely for the Grafana / TIM / TIGM overlay, unless they are also required by the core stack.
+- [ ] `pre-1.0.0` `cleanup` Either remove `compose.grafana.yml` and `compose.tigm.yml` from the repository, or move them under an `examples/` or `experiments/` directory and mark them explicitly as unsupported optional extensions, not part of the supported ASS-CMO stack.
+- [ ] `pre-1.0.0` `docs` Add a brief note in a visible location (e.g. README or CHANGELOG) that these overlays have been moved out of the supported core path.
+
+Note: `CHANGELOG.md` historical entries that mention Grafana / TIM / TIGM are intentionally kept as-is, similar to how historical shared-inventory-token entries are preserved for context.
+
 ## Immediate security hardening
 
 These items are intentionally small and surgical.  
