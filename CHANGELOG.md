@@ -7,6 +7,7 @@
 - Added dashboard screenshots to `README.md`.
 
 ### Changed
+- Renamed the Agent auth dashboard page to Revoke agents and added a 3-character client-side search gate so agent auth cards stay hidden until searched.
 - Restructured the public documentation: `README.md` is now a concise landing page, `INSTALL.md` is installer-first, and a new `TROUBLESHOOTING.md` collects the operational checks and failure diagnosis previously mixed into `INSTALL.md`.
 - Documented the optional Grafana / TIM / TIGM monitoring overlays as no longer part of the supported core direction, with removal or relocation planned before v1.0.0 (roadmap only; no overlay code removed).
 - Simplified documented `docker compose` commands to rely on the installer-created root `.env` symlink, and reduced repeated base-URL entry in copy-paste install/update commands.
