@@ -13,24 +13,24 @@ SELECT
     CASE
         WHEN os_name ILIKE '%microsoft%' OR os_name ILIKE '%windows%' THEN
             CASE
-                WHEN agent_version = '0.7.3' THEN 'ok'
+                WHEN agent_version = '0.8.0' THEN 'ok'
                 ELSE 'outdated'
             END
         ELSE
             CASE
-                WHEN agent_version = '0.7.3' THEN 'ok'
+                WHEN agent_version = '0.8.0' THEN 'ok'
                 ELSE 'outdated'
             END
     END AS agent_state,
     CASE
         WHEN os_name ILIKE '%microsoft%' OR os_name ILIKE '%windows%' THEN
             CASE
-                WHEN agent_version = '0.7.3' THEN '🟢 OK'
+                WHEN agent_version = '0.8.0' THEN '🟢 OK'
                 ELSE '🟡 OUTDATED'
             END
         ELSE
             CASE
-                WHEN agent_version = '0.7.3' THEN '🟢 OK'
+                WHEN agent_version = '0.8.0' THEN '🟢 OK'
                 ELSE '🟡 OUTDATED'
             END
     END AS agent_status,
@@ -42,9 +42,9 @@ FROM inventory
 ORDER BY
     CASE
         WHEN os_name ILIKE '%microsoft%' OR os_name ILIKE '%windows%' THEN
-            CASE WHEN agent_version = '0.7.3' THEN 2 ELSE 1 END
+            CASE WHEN agent_version = '0.8.0' THEN 2 ELSE 1 END
         ELSE
-            CASE WHEN agent_version = '0.7.3' THEN 2 ELSE 1 END
+            CASE WHEN agent_version = '0.8.0' THEN 2 ELSE 1 END
     END,
     os_name,
     agent_version,

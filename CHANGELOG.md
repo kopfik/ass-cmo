@@ -1,7 +1,20 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Added an MIT `LICENSE` and a project transparency / AI-assisted note in `README.md`.
+- Added dashboard screenshots to `README.md`.
 
 ### Changed
+- Restructured the public documentation: `README.md` is now a concise landing page, `INSTALL.md` is installer-first, and a new `TROUBLESHOOTING.md` collects the operational checks and failure diagnosis previously mixed into `INSTALL.md`.
+- Documented the optional Grafana / TIM / TIGM monitoring overlays as no longer part of the supported core direction, with removal or relocation planned before v1.0.0 (roadmap only; no overlay code removed).
+- Simplified documented `docker compose` commands to rely on the installer-created root `.env` symlink, and reduced repeated base-URL entry in copy-paste install/update commands.
+- Documented the current agent-update model (operator-triggered; a server-driven automatic updater remains intentionally deferred) and recorded planned application-level access control as a roadmap item.
+- Polished the dashboard About modal: shorter, cleaner text aligned with the README, without changing the security model or behavior.
+
+### Fixed
+- The Agent versions dashboard view now compares against the current bundled agent version (`0.8.0`) instead of a stale `0.7.3` constant, so up-to-date hosts are no longer shown as outdated.
 
 ## v0.8.0
 
