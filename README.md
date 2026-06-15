@@ -8,6 +8,18 @@ The long-term idea is to grow into a practical replacement for tools such as PuT
 
 ASS-CMO is intentionally not a full RMM. It does not provide arbitrary remote command execution from the server by default. Agents report inventory data to the server, and administrators connect to machines from their own workstation using local SSH/RDP clients and registered URI handlers.
 
+---
+
+**Project status:** Early public release. The core workflow is installable and usable in day-to-day admin work. The project is still evolving — APIs, config layout, and agent formats may change before a stable 1.0.
+
+**Transparency:** ASS-CMO is an AI-assisted project. A substantial part of the implementation and documentation was produced with the help of AI coding assistants, then reviewed, tested, and curated manually by the maintainer. The codebase is intentionally small and readable so that it can be inspected directly.
+
+**Security note:** ASS-CMO is designed for use inside a trusted admin network and has not undergone a formal security audit. Before exposing any part of the stack outside that boundary, read [SECURITY.md](SECURITY.md).
+
+**License:** [MIT](LICENSE)
+
+---
+
 ## Current status
 
 Current version is tracked in the meta/VERSION file and in [CHANGELOG.md](CHANGELOG.md).
