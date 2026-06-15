@@ -275,6 +275,27 @@ Design constraints:
 - [ ] `pre-1.0.0` `import` Add OpenSSH `config` import (Host alias, HostName, Port, User) for Linux/Unix admins.
 - [ ] `pre-1.0.0` `import` Provide a preview / dry-run step before any write, and never persist credentials or secrets.
 
+### Application login / access control
+
+**Decision:** Application-level login and access control are planned, but probably not a hard v1.0.0 requirement. The current intended deployment model is a trusted admin network / VPN / restricted reverse proxy, not public internet exposure.
+
+- The privacy and internal-visibility risk of visible enrollment/inventory data is acknowledged. Within the intended deployment boundary it is treated as an access-control and deployment-boundary issue, not an application-layer secrecy feature.
+- If an unauthorized person can observe or use the internal admin dashboard during host enrollment, that already implies a workplace / internal-network compromise beyond the scope of a read-only inventory table.
+- Detailed exposure/trust-boundary wording lives in `SECURITY.md`.
+
+- [ ] `pre-1.0.0` `access-control` Decide whether application-level login is a v1.0.0 requirement or a later milestone.
+- [ ] `later` `access-control` Design optional application-level login / access control that does not weaken the trusted-network deployment assumption.
+
+### Agent auto-updater decision
+
+**Decision:** A server-driven automatic agent updater is not part of the supported core workflow now. Agent updates are intentionally operator-triggered by rerunning the installer/update command from the dashboard helper links.
+
+- It was deferred because a safe updater requires careful security design: integrity/signature verification, rollback behavior, trust boundaries, and compromise-impact analysis.
+- This is acceptable for now because agents change rarely, and for several upcoming versions agent changes are expected to mostly affect collection behavior rather than the inventory submission format, so older agents should remain tolerable for a while.
+- Future requirement: any return of automatic updating must ship with a verified update channel before it is enabled.
+
+- [ ] `later` `updater` Re-introduce automatic agent updates only with signature/checksum verification, rollback, and explicit trust boundaries.
+
 ## Immediate security hardening
 
 These items are intentionally small and surgical.  

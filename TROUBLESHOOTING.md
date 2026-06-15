@@ -26,7 +26,7 @@ All commands below are read-only checks or safe repair steps. Replace `asscmo`, 
 Show container status:
 
 ```bash
-docker compose --env-file config.local/.env ps
+docker compose ps
 ```
 
 Expected running containers:
@@ -41,13 +41,13 @@ ass-nginx
 If a container is missing, restarting, or crashing, inspect the logs:
 
 ```bash
-docker compose --env-file config.local/.env logs
+docker compose logs
 ```
 
 To follow logs for a single service:
 
 ```bash
-docker compose --env-file config.local/.env logs -f nginx
+docker compose logs -f nginx
 ```
 
 ---
@@ -83,9 +83,10 @@ https://adminer.example.com/                   (database admin UI)
 Check that the public endpoints respond (replace the hostname):
 
 ```bash
-curl -Is https://ass-cmo.example.com/health.php | head -1
-curl -Is https://ass-cmo.example.com/agents/linux/install-ass-cmo-agent.sh | head -1
-curl -Is https://ass-cmo.example.com/agents/windows/install-ass-cmo-agent.ps1 | head -1
+BASE_URL="https://ass-cmo.example.com"
+curl -Is "$BASE_URL/health.php" | head -1
+curl -Is "$BASE_URL/agents/linux/install-ass-cmo-agent.sh" | head -1
+curl -Is "$BASE_URL/agents/windows/install-ass-cmo-agent.ps1" | head -1
 ```
 
 These should return `HTTP/... 200`. If any returns a non-200 status, check nginx configuration and file placement.
@@ -197,10 +198,10 @@ $env:ASSCMO_OVERWRITE_HANDLERS = "1"
 ## Where to look for logs
 
 ```text
-docker compose --env-file config.local/.env logs           full stack
-docker compose --env-file config.local/.env logs nginx      reverse proxy / TLS
-docker compose --env-file config.local/.env logs php        dashboard and ingest endpoint
-docker compose --env-file config.local/.env logs postgres   database
+docker compose logs           full stack
+docker compose logs nginx      reverse proxy / TLS
+docker compose logs php        dashboard and ingest endpoint
+docker compose logs postgres   database
 journalctl -u ass-cmo-agent.service                         Linux agent (on the managed host)
 ```
 
@@ -245,7 +246,7 @@ Create the Docker network and start the core stack manually:
 
 ```bash
 docker network create ass-net 2>/dev/null || true
-docker compose --env-file config.local/.env up -d postgres adminer php nginx
+docker compose up -d postgres adminer php nginx
 ```
 
 To apply the schema and recreate the dashboard role manually, use the commands in [Database checks](#database-checks) and [Dashboard access checks](#dashboard-access-checks).

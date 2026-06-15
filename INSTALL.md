@@ -115,7 +115,7 @@ The installer sets up only the core stack. Experimental optional overlays are no
 Check that the core containers are running:
 
 ```bash
-docker compose --env-file config.local/.env ps
+docker compose ps
 ```
 
 Expected running containers:
@@ -167,7 +167,7 @@ The root `.env` is a symlink to `config.local/.env` for Docker Compose compatibi
 After changing values that the PHP container reads (for example a default SSH user), recreate the container:
 
 ```bash
-docker compose --env-file config.local/.env up -d --force-recreate php
+docker compose up -d --force-recreate php
 ```
 
 ---
@@ -183,7 +183,7 @@ Enrollment is a two-phase flow: the installer initiates a pending request and di
 Run as root on the managed Linux host (replace the hostname):
 
 ```bash
-tmp="$(mktemp)" && trap 'rm -f "$tmp"' EXIT && curl -fsSL https://ass-cmo.example.com/agents/linux/install-ass-cmo-agent.sh -o "$tmp" && sh "$tmp" --base-url https://ass-cmo.example.com
+BASE_URL="https://ass-cmo.example.com"; tmp="$(mktemp)" && trap 'rm -f "$tmp"' EXIT && curl -fsSL "$BASE_URL/agents/linux/install-ass-cmo-agent.sh" -o "$tmp" && sh "$tmp" --base-url "$BASE_URL"
 ```
 
 For a fresh host, the installer starts an enrollment request and waits for admin approval. For a host that already has `/etc/ass-cmo/agent.conf`, the installer updates the agent files and runs an inventory report immediately. A successful report prints:
@@ -223,7 +223,7 @@ systemctl daemon-reload
 Run PowerShell as Administrator (replace the hostname):
 
 ```powershell
-Invoke-WebRequest -UseBasicParsing "https://ass-cmo.example.com/agents/windows/install-ass-cmo-agent.ps1" -OutFile "$env:TEMP\install-ass-cmo-agent.ps1"; powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:TEMP\install-ass-cmo-agent.ps1" -BaseUrl "https://ass-cmo.example.com"
+$BaseUrl = "https://ass-cmo.example.com"; Invoke-WebRequest -UseBasicParsing "$BaseUrl/agents/windows/install-ass-cmo-agent.ps1" -OutFile "$env:TEMP\install-ass-cmo-agent.ps1"; powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:TEMP\install-ass-cmo-agent.ps1" -BaseUrl "$BaseUrl"
 ```
 
 A fresh Windows enrollment starts without local config, displays a pairing code on the console, and writes `%ProgramData%\ASS-CMO\agent.conf.ps1` after admin approval. An existing local config is kept on reinstall. The installer creates the scheduled task `ASS-CMO-Agent` and runs the first inventory report immediately.
@@ -285,10 +285,12 @@ To update the server, pull the latest code and recreate the core stack:
 
 ```bash
 git pull
-docker compose --env-file config.local/.env up -d postgres adminer php nginx
+docker compose up -d postgres adminer php nginx
 ```
 
 Linux agents are re-run automatically after package transactions through the apt or pacman hook. The apt hook is non-blocking and does not break package upgrades if the ASS-CMO server is unavailable. To update an agent's files explicitly, re-run the agent installer one-liner on the managed host.
+
+There is no server-driven automatic agent updater: agent updates are operator-triggered by rerunning the installer/update command. A secure automatic updater is intentionally deferred until an integrity/signature, rollback, and trust-boundary design is in place.
 
 ---
 

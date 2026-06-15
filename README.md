@@ -55,14 +55,20 @@ For connections, the dashboard generates local links such as `assssh://host` and
 
 ## Screenshots
 
+Dashboard — general overview:
+
+![ASS-CMO dashboard general overview](docs/images/dashboard/general-overview.png)
+
+Dashboard — Linux overview:
+
+![ASS-CMO dashboard Linux overview](docs/images/dashboard/linux-overview.png)
+
 The installer flow is shown in the [installation guide](INSTALL.md). Example installer screenshots are stored under `docs/images/install/`:
 
 <picture>
   <source media="(prefers-color-scheme: light)" srcset="docs/images/install/light/03-finished-and-verify.png">
   <img alt="Installer finished: dashboard role setup complete, config summary printed, and the core containers running" src="docs/images/install/dark/03-finished-and-verify.png">
 </picture>
-
-> Dashboard screenshots: _placeholder — to be added._
 
 ## Quick start
 
@@ -98,3 +104,9 @@ v1.0.0  later stable release
 ASS-CMO previously included experimental Grafana and TIGM-style monitoring/visualization overlays. These are **no longer part of the supported ASS-CMO core direction** and are not documented here.
 
 Before v1.0.0 they will be removed from the supported core path. The final form is not yet decided — they will either be removed from the repository or moved into an `examples/` / `experiments/` area as unsupported optional extensions. The supported core remains inventory collection and storage, enrollment with per-host agent secrets, the admin overview dashboard, and the local connection launchers.
+
+## Access control and agent updates
+
+**Login / access control:** Application-level login and access control are planned, but probably not a v1.0.0 requirement. ASS-CMO is intended to run inside a trusted admin network — a private LAN, a VPN, or a restricted reverse proxy — not on the public internet. Within that boundary, enrollment and inventory data are visible to administrators; the resulting privacy and internal-visibility risk is treated as an access-control and deployment-boundary concern. See [SECURITY.md](SECURITY.md) for the exposure model.
+
+**Agent updates:** There is no server-driven automatic agent updater. Agent updates are operator-triggered by rerunning the installer/update command from the dashboard helper links. A safe automatic updater would require integrity/signature verification, rollback behavior, and clear trust boundaries, so it is intentionally deferred. This is acceptable for now because agents change rarely.
