@@ -489,6 +489,12 @@ Suggested wording:
 - [x] `hardening` Change RDP handler to use `-ArgumentList @("/v:$Target")`.
 - [x] `hardening` Avoid `cmd.exe /k "ssh $Target"` fallback unless target validation is strict.
 
+- [ ] `later` Offer a local Windows SSH backend selection during handler install: native OpenSSH vs PuTTY.
+  - Keep `assssh://` stable as the dashboard/server SSH intent; this is a local handler backend choice only, with no dashboard/server protocol change.
+  - An unwired backend example already exists: `agents/handlers/windows/examples/assssh-putty-backend-handler.ps1`.
+  - PuTTY saved sessions, if ever supported, need separate review with an allowlist and safe encoding before implementation.
+  - Not a current blocker.
+
 ---
 
 ## Architecture / scope cleanup
@@ -526,8 +532,8 @@ Suggested wording:
 
 - [x] `cleanup` Remove temporary theme override blocks from recent UI iterations.
 - [x] `cleanup` Keep top metadata unboxed across themes.
-- [ ] `cleanup` Reduce theme-specific component overrides where CSS variables are enough.
-- [ ] `cleanup` Keep only necessary per-theme exceptions.
+- [x] `cleanup` Reduce recent theme-specific component overrides where CSS variables were enough.
+- [ ] `cleanup` Continue keeping only necessary per-theme exceptions during future CSS changes.
 - [ ] `cleanup` Consider splitting CSS into logical files if it keeps growing:
   - base/layout
   - components

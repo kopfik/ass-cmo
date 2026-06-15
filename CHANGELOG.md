@@ -6,6 +6,7 @@
 ### Added
 - Added an MIT `LICENSE` and a project transparency / AI-assisted note in `README.md`.
 - Added dashboard screenshots to `README.md`.
+- Added an example PuTTY backend handler for the Windows `assssh://` SSH intent (`agents/handlers/windows/examples/assssh-putty-backend-handler.ps1`). It is a prototype/example only: not wired into the installer or dashboard, introduces no new protocol, writes no registry, and passes no credentials.
 
 ### Changed
 - Renamed the Agent auth dashboard page to Revoke agents and added a 3-character client-side search gate so agent auth cards stay hidden until searched.
@@ -14,6 +15,8 @@
 - Simplified documented `docker compose` commands to rely on the installer-created root `.env` symlink, and reduced repeated base-URL entry in copy-paste install/update commands.
 - Documented the current agent-update model (operator-triggered; a server-driven automatic updater remains intentionally deferred) and recorded planned application-level access control as a roadmap item.
 - Polished the dashboard About modal: shorter, cleaner text aligned with the README, without changing the security model or behavior.
+- Clarified the About modal "Not boring" toggle as a local, browser-only presentation preference (adds dry UI comments); it is never sent to the server and does not affect security decisions, scheduling, or inventory.
+- Ignored the local `_sandbox/` scratch workspace used for prototype/iteration work so it is never committed.
 
 ### Fixed
 - The Agent versions dashboard view now compares against the current bundled agent version (`0.8.0`) instead of a stale `0.7.3` constant, so up-to-date hosts are no longer shown as outdated.
