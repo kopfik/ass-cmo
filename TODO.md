@@ -61,7 +61,7 @@ These items are tracked after the final internal `v0.7.5` pre-public review snap
   - Keep it as an explicit opt-in manual action example if retained.
   - Do not install it by default in public v0.8.
 
-### Should-fix before public import
+### Post-public hardening / before wider deployment
 
 - [x] `security` Make dashboard SQL view execution fail closed if read-only dashboard DB credentials are missing.
   - Avoid falling back silently to the full application DB user.
@@ -196,9 +196,9 @@ UX direction: the installer initiates enrollment and the pairing code appears on
 - [x] `0.8.0` Real Windows host validation of fresh enrollment: pairing code display, approval, local `ASSCMO_AGENT_SECRET` config creation, preserve on reinstall, and authenticated inventory submission.
 - [x] `0.8.0` Inventory ingest endpoint authenticates `uid` + per-host agent secret against `agent_auth` by default.
 - [x] `0.8.0` Bundled Linux and Windows agents can use `ASSCMO_AGENT_SECRET` for inventory submissions with legacy shared-token fallback.
-- [ ] `0.8.0` All future inventory submissions authenticate with uid + per-host secret.
+- [x] `0.8.0` All future inventory submissions authenticate with uid + per-host secret.
 - [x] `0.8.0` Initial DB schema uses `agent_enrollment_requests` + `agent_auth` tables; do not build a broad identity subsystem unless later design requires it.
-- [ ] `0.8.0` Existing 0.7.x hosts with shared-token config follow the migration path, not re-enrollment.
+- [x] `0.8.0` Existing 0.7.x hosts with shared-token config follow the migration path, not re-enrollment.
 
 ### v0.8.0 pre-public polish: agents and URI handlers
 
