@@ -240,13 +240,40 @@ This is a planned pre-v1.0.0 cleanup item. No immediate code removal is required
 
 This supersedes the older "advanced/lab-only until hardened" wording: these overlays are no longer planned as part of the supported core stack.
 
-- [ ] `pre-1.0.0` `cleanup` Update `README.md` to stop presenting Grafana / TIM / TIGM overlays as supported or current ASS-CMO features. Reframe them as historical/optional if mentioned at all.
-- [ ] `pre-1.0.0` `cleanup` Update `INSTALL.md` to remove any guidance that implies the Grafana / TIM / TIGM / InfluxDB / Telegraf / MQTT stack is part of the standard install path.
+- [x] `pre-1.0.0` `cleanup` Update `README.md` to stop presenting Grafana / TIM / TIGM overlays as supported or current ASS-CMO features. Reframe them as historical/optional if mentioned at all.
+- [x] `pre-1.0.0` `cleanup` Update `INSTALL.md` to remove any guidance that implies the Grafana / TIM / TIGM / InfluxDB / Telegraf / MQTT stack is part of the standard install path.
 - [ ] `pre-1.0.0` `cleanup` Review `.env.example` and remove or clearly mark as optional any variables that exist solely for the Grafana / TIM / TIGM overlay, unless they are also required by the core stack.
 - [ ] `pre-1.0.0` `cleanup` Either remove `compose.grafana.yml` and `compose.tigm.yml` from the repository, or move them under an `examples/` or `experiments/` directory and mark them explicitly as unsupported optional extensions, not part of the supported ASS-CMO stack.
-- [ ] `pre-1.0.0` `docs` Add a brief note in a visible location (e.g. README or CHANGELOG) that these overlays have been moved out of the supported core path.
+- [x] `pre-1.0.0` `docs` Add a brief note in a visible location (e.g. README or CHANGELOG) that these overlays have been moved out of the supported core path.
 
 Note: `CHANGELOG.md` historical entries that mention Grafana / TIM / TIGM are intentionally kept as-is, similar to how historical shared-inventory-token entries are preserved for context.
+
+### Connection catalog import (PuTTY / RDCMan / OpenSSH config)
+
+**Goal:** help administrators migrate their existing connection catalogs into ASS-CMO. This is a pre-v1.0.0 roadmap item, not an implementation task.
+
+Initial scope — only these formats for now:
+
+- PuTTY session import
+- RDCMan `.rdg` import
+- OpenSSH `config` import for Linux/Unix admins
+
+No other import formats are planned at this stage.
+
+Design constraints:
+
+- Import is for migrating existing admin connection catalogs, not for populating inventory.
+- Imported entries are connection hints / catalog data, **not** trusted inventory.
+- Imported data must stay separate from agent-reported inventory until a matching/merge design exists.
+- Import must **never** import credentials, passwords, private keys, credential blobs, or any secrets.
+- Import must offer a preview / dry-run before writing anything.
+- Supported initial import fields: display name, hostname / FQDN / IP, protocol, port, folder / group, optional username, and notes.
+
+- [ ] `pre-1.0.0` `import` Define the connection-catalog data model kept separate from agent inventory.
+- [ ] `pre-1.0.0` `import` Add PuTTY session import (display name, host, protocol, port, username, notes).
+- [ ] `pre-1.0.0` `import` Add RDCMan `.rdg` import (display name, host, port, folder/group, notes), skipping any stored credential blobs.
+- [ ] `pre-1.0.0` `import` Add OpenSSH `config` import (Host alias, HostName, Port, User) for Linux/Unix admins.
+- [ ] `pre-1.0.0` `import` Provide a preview / dry-run step before any write, and never persist credentials or secrets.
 
 ## Immediate security hardening
 
