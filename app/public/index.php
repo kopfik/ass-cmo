@@ -127,44 +127,37 @@ function render_agent_auth_main(array $rows, string $error, ?array $flash, strin
     <?php if ($error !== ''): ?>
         <div class="error"><?= h($error) ?></div>
     <?php endif; ?>
-    <?php if ($rows === []): ?>
-    <div class="enrollment-list">
-        <div class="empty">No agent auth rows found.</div>
+    <div class="table-tools filter">
+        <label class="filter-label" for="agent-auth-filter">Filter</label>
+        <input id="agent-auth-filter" class="filter-input" type="search"
+               placeholder="Type to filter (&ge;3 chars), or: all &middot; date" autocomplete="off">
+        <span id="agent-auth-count" class="row-count"></span>
     </div>
-    <?php else: ?>
-    <div class="table-tools">
-        <label class="filter-label" for="agent-auth-filter">Search</label>
-        <input id="agent-auth-filter" class="filter-input" type="search" placeholder="Type at least 3 characters to search agent auth rows..." autocomplete="off">
-    </div>
-    <div id="agent-auth-list" class="enrollment-list">
-        <div class="empty" id="agent-auth-empty" style="display:none;">No matching agent auth rows.</div>
-        <?php foreach ($rows as $row): ?>
-            <?php
-            $uid = (string)$row['uid'];
-            $hostname = (string)($row['hostname'] ?? '');
-            $location = (string)($row['location'] ?? '');
-            $ipv4 = (string)($row['primary_ipv4_addr'] ?? '');
-            $confirmParts = array_filter([
-                $hostname !== '' ? "host {$hostname}" : '',
-                $ipv4 !== '' ? "IP {$ipv4}" : '',
-                $location !== '' ? "location {$location}" : '',
-                "UID {$uid}",
-            ]);
-            $confirmText = 'Revoke agent secret for ' . implode(', ', $confirmParts) . '? This host must fresh re-enroll to recover.';
-            $searchValue = trim(implode(' ', array_filter([
-                $hostname,
-                (string)($row['fqdn'] ?? ''),
-                $location,
-                $ipv4,
-                $uid,
-                (string)($row['status'] ?? ''),
-                (string)($row['last_auth_at'] ?? ''),
-                (string)($row['last_inventory_at'] ?? ($row['inventory_update_time'] ?? '')),
-                (string)($row['created_at'] ?? ''),
-                (string)($row['revoked_at'] ?? ''),
-            ], static fn ($value) => $value !== '')));
-            ?>
-                <div class="enrollment-card" data-agent-auth-card data-search="<?= h($searchValue) ?>" style="display:none;">
+    <div class="enrollment-list" id="agent-auth-list">
+        <?php if ($rows === []): ?>
+            <div class="empty">No agent auth rows found.</div>
+        <?php else: ?>
+            <?php foreach ($rows as $row): ?>
+                <?php
+                $uid = (string)$row['uid'];
+                $hostname = (string)($row['hostname'] ?? '');
+                $location = (string)($row['location'] ?? '');
+                $ipv4 = (string)($row['primary_ipv4_addr'] ?? '');
+                $confirmParts = array_filter([
+                    $hostname !== '' ? "host {$hostname}" : '',
+                    $ipv4 !== '' ? "IP {$ipv4}" : '',
+                    $location !== '' ? "location {$location}" : '',
+                    "UID {$uid}",
+                ]);
+                $confirmText = 'Revoke agent secret for ' . implode(', ', $confirmParts) . '? This host must fresh re-enroll to recover.';
+                $authLabel   = $hostname !== '' ? $hostname : $uid;
+                $authCreated = isset($row['created_at']) ? (string)$row['created_at'] : '';
+                ?>
+                <div class="enrollment-card"
+                     data-agent-auth-card
+                     data-auth-label="<?= h($authLabel) ?>"
+                     data-auth-created="<?= h($authCreated) ?>"
+                >
                     <div class="enrollment-card-header">
                         <span class="enrollment-card-id"><?= h($hostname !== '' ? $hostname : $uid) ?></span>
                         <span class="enrollment-badge <?= ((string)$row['status'] === 'revoked') ? 'enrollment-badge-expired' : 'enrollment-badge-pending' ?>"><?= h((string)$row['status']) ?></span>

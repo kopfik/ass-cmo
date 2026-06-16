@@ -204,6 +204,97 @@
     const launcherInput = document.getElementById('command-launcher-input');
     const launcherResults = document.getElementById('command-launcher-results');
 
+    // ── Agent-auth filter ─────────────────────────────────────────────────────
+
+    const agentAuthFilter = document.getElementById('agent-auth-filter');
+    const agentAuthCountEl = document.getElementById('agent-auth-count');
+    const agentAuthList = document.getElementById('agent-auth-list');
+
+    function filterCmd(raw) {
+        const v = raw.trim().toLowerCase();
+        if (v === 'all') return 'all';
+        if (v === 'date') return 'date';
+        return v;
+    }
+
+    function isInteractiveEl(el) {
+        if (!el || el.nodeType !== 1) return false;
+        const tag = el.tagName.toLowerCase();
+        if (['button', 'a', 'input', 'textarea', 'select', 'label', 'form', 'summary'].includes(tag)) return true;
+        if (el.getAttribute('role') === 'button') return true;
+        const ti = el.getAttribute('tabindex');
+        return ti !== null && ti !== '-1';
+    }
+
+    function hasInteractiveAncestor(el, stopAt) {
+        let node = el;
+        while (node && node !== stopAt) {
+            if (isInteractiveEl(node)) return true;
+            node = node.parentElement;
+        }
+        return false;
+    }
+
+    function applyAgentAuthFilter() {
+        if (!agentAuthList) return;
+        const cards = Array.from(agentAuthList.querySelectorAll('[data-agent-auth-card]'));
+        const cmd = filterCmd(agentAuthFilter ? agentAuthFilter.value : '');
+
+        if (cmd === 'all') {
+            cards.sort((a, b) =>
+                (a.dataset.authLabel || '').localeCompare(b.dataset.authLabel || '', undefined, { sensitivity: 'base' })
+            );
+            cards.forEach(c => agentAuthList.appendChild(c));
+            cards.forEach(c => { c.hidden = false; });
+        } else if (cmd === 'date') {
+            cards.sort((a, b) => {
+                const da = a.dataset.authCreated || '';
+                const db = b.dataset.authCreated || '';
+                if (da > db) return -1;
+                if (da < db) return 1;
+                return 0;
+            });
+            cards.forEach(c => agentAuthList.appendChild(c));
+            cards.forEach(c => { c.hidden = false; });
+        } else if (cmd.length >= 3) {
+            for (const card of cards) {
+                const text = (card.textContent || '').toLowerCase();
+                card.hidden = !text.includes(cmd);
+            }
+        } else {
+            for (const card of cards) {
+                card.hidden = true;
+            }
+        }
+
+        if (agentAuthCountEl) {
+            const visible = cards.filter(c => !c.hidden).length;
+            agentAuthCountEl.textContent = visible + ' / ' + cards.length;
+        }
+    }
+
+    if (agentAuthFilter) {
+        agentAuthFilter.addEventListener('input', applyAgentAuthFilter);
+        applyAgentAuthFilter();
+    }
+
+    if (agentAuthList) {
+        agentAuthList.addEventListener('click', event => {
+            const card = event.target.closest('[data-agent-auth-card]');
+            if (!card) return;
+            if (hasInteractiveAncestor(event.target, card)) return;
+            if (agentAuthFilter) agentAuthFilter.focus();
+        });
+    }
+
+    // ── Auto-focus view filter on page load ───────────────────────────────────
+
+    if (agentAuthFilter) {
+        agentAuthFilter.focus();
+    } else if (filter) {
+        filter.focus();
+    }
+
     if (!table) {
         return;
     }
