@@ -7,9 +7,12 @@
 - Added an MIT `LICENSE` and a project transparency / AI-assisted note in `README.md`.
 - Added dashboard screenshots to `README.md`.
 - Added an example PuTTY backend handler for the Windows `assssh://` SSH intent (`agents/handlers/windows/examples/assssh-putty-backend-handler.ps1`). It is a prototype/example only: not wired into the installer or dashboard, introduces no new protocol, writes no registry, and passes no credentials.
+- Added an opt-in Linux bulk agent update example view (`config.example/dashboard-view-examples/60-linux-agent-bulk-update.sql`). The view includes a placeholder guard so an unreplaced `__ASSCMO_LINUX_AGENT_VERSION__` does not mark every Linux host as outdated before the operator substitutes the expected version.
 
 ### Changed
 - Renamed the Agent auth dashboard page to Revoke agents and added a 3-character client-side search gate so agent auth cards stay hidden until searched.
+- Bundled Linux, Proxmox, and Windows overview dashboard view examples now include short usage notes at the top of each file.
+- Revoke agents search no longer shows a duplicate hint panel below the search input; the input placeholder text and 3-character gate remain unchanged.
 - Restructured the public documentation: `README.md` is now a concise landing page, `INSTALL.md` is installer-first, and a new `TROUBLESHOOTING.md` collects the operational checks and failure diagnosis previously mixed into `INSTALL.md`.
 - Documented the optional Grafana / TIM / TIGM monitoring overlays as no longer part of the supported core direction, with removal or relocation planned before v1.0.0 (roadmap only; no overlay code removed).
 - Simplified documented `docker compose` commands to rely on the installer-created root `.env` symlink, and reduced repeated base-URL entry in copy-paste install/update commands.
