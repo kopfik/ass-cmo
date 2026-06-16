@@ -137,7 +137,6 @@ function render_agent_auth_main(array $rows, string $error, ?array $flash, strin
         <input id="agent-auth-filter" class="filter-input" type="search" placeholder="Type at least 3 characters to search agent auth rows..." autocomplete="off">
     </div>
     <div id="agent-auth-list" class="enrollment-list">
-        <div class="empty" id="agent-auth-hint">Type at least 3 characters to search agent auth rows.</div>
         <div class="empty" id="agent-auth-empty" style="display:none;">No matching agent auth rows.</div>
         <?php foreach ($rows as $row): ?>
             <?php

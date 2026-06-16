@@ -162,7 +162,6 @@
 
         const list = document.getElementById('agent-auth-list');
         const cards = list ? Array.from(list.querySelectorAll('[data-agent-auth-card]')) : [];
-        const hint = document.getElementById('agent-auth-hint');
         const empty = document.getElementById('agent-auth-empty');
         const MIN_CHARS = 3;
 
@@ -173,17 +172,10 @@
                 for (const card of cards) {
                     card.style.display = 'none';
                 }
-                if (hint) {
-                    hint.style.display = '';
-                }
                 if (empty) {
                     empty.style.display = 'none';
                 }
                 return;
-            }
-
-            if (hint) {
-                hint.style.display = 'none';
             }
 
             let matches = 0;
