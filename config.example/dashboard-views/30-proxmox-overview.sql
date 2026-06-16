@@ -47,6 +47,7 @@ SELECT
     ks.latest_known,
     n.disk_usage_percent || '%' AS disk,
     n.os_name,
+    notes,
     date_trunc('second', n.inventory_update_time AT TIME ZONE 'Europe/Prague') AS last_seen
 FROM normalized n
 JOIN kernel_stats ks ON ks.os_family = n.os_family AND ks.os_major = n.os_major AND ks.kernel_track = n.kernel_track

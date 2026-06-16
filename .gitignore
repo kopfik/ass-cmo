@@ -92,6 +92,8 @@ config.local/dashboard-views/*
 # Example dashboard views
 !config.example/dashboard-views/
 !config.example/dashboard-views/*.sql
+!config.example/dashboard-view-examples/
+!config.example/dashboard-view-examples/*.sql
 config.local/branding/*
 !config.local/branding/.gitkeep
 
