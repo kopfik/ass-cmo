@@ -153,50 +153,6 @@
 
     // ────────────────────────────────────────────────────────────────────────
 
-    // ── "Revoke agents" page search (cards hidden until 3+ characters) ──────────
-    (function initAgentAuthSearch() {
-        const input = document.getElementById('agent-auth-filter');
-        if (!input) {
-            return;
-        }
-
-        const list = document.getElementById('agent-auth-list');
-        const cards = list ? Array.from(list.querySelectorAll('[data-agent-auth-card]')) : [];
-        const empty = document.getElementById('agent-auth-empty');
-        const MIN_CHARS = 3;
-
-        function apply() {
-            const query = input.value.trim().toLowerCase();
-
-            if (query.length < MIN_CHARS) {
-                for (const card of cards) {
-                    card.style.display = 'none';
-                }
-                if (empty) {
-                    empty.style.display = 'none';
-                }
-                return;
-            }
-
-            let matches = 0;
-            for (const card of cards) {
-                const haystack = (card.getAttribute('data-search') || '').toLowerCase();
-                const show = haystack.includes(query);
-                card.style.display = show ? '' : 'none';
-                if (show) {
-                    matches += 1;
-                }
-            }
-
-            if (empty) {
-                empty.style.display = matches === 0 ? '' : 'none';
-            }
-        }
-
-        input.addEventListener('input', apply);
-        apply();
-    })();
-
     const table = document.getElementById('dashboard-table');
     const filter = document.getElementById('table-filter');
     const rowCount = document.getElementById('table-row-count');
