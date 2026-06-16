@@ -191,6 +191,11 @@
         return false;
     }
 
+    function setAgentAuthCardVisible(card, visible) {
+        card.hidden = !visible;
+        card.style.display = visible ? '' : 'none';
+    }
+
     function applyAgentAuthFilter() {
         if (!agentAuthList) return;
         const cards = Array.from(agentAuthList.querySelectorAll('[data-agent-auth-card]'));
@@ -201,7 +206,7 @@
                 (a.dataset.authLabel || '').localeCompare(b.dataset.authLabel || '', undefined, { sensitivity: 'base' })
             );
             cards.forEach(c => agentAuthList.appendChild(c));
-            cards.forEach(c => { c.hidden = false; });
+            cards.forEach(c => setAgentAuthCardVisible(c, true));
         } else if (cmd === 'date') {
             cards.sort((a, b) => {
                 const da = a.dataset.authCreated || '';
@@ -211,15 +216,15 @@
                 return 0;
             });
             cards.forEach(c => agentAuthList.appendChild(c));
-            cards.forEach(c => { c.hidden = false; });
+            cards.forEach(c => setAgentAuthCardVisible(c, true));
         } else if (cmd.length >= 3) {
             for (const card of cards) {
                 const text = (card.textContent || '').toLowerCase();
-                card.hidden = !text.includes(cmd);
+                setAgentAuthCardVisible(card, text.includes(cmd));
             }
         } else {
             for (const card of cards) {
-                card.hidden = true;
+                setAgentAuthCardVisible(card, false);
             }
         }
 
