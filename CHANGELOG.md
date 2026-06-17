@@ -12,7 +12,8 @@
 ### Changed
 - Renamed the Agent auth dashboard page to Revoke agents and added a 3-character client-side search gate so agent auth cards stay hidden until searched.
 - Revoke agents search now accepts two keyboard-first commands in addition to normal text search: `all` shows every agent auth card sorted alphabetically, and `date` shows every card sorted newest-first by `agent_auth.created_at`. The Revoke agents filter is auto-focused on page load and clicking a card background (away from buttons, forms, and links) refocuses it for continuous typing.
-- The dashboard JavaScript bundle (`dashboard.js`) is now loaded with a cache-busting version query so browsers pick up new markup and behavior together during rollout.
+- The dashboard JavaScript bundle (`dashboard.js`) is now loaded with a cache-busting version query derived from the asset's modification time (falling back to the app version), so browsers pick up new markup and behavior together during rollout.
+- Web actions now use the `assweb://` intent only when the dashboard runs as an installed PWA / in standalone display mode; in a normal browser tab they open the original HTTP(S) URL directly, avoiding the slower OS protocol round-trip. The raw HTTP(S) target is preserved in a `data-web-url` attribute wherever an `assweb://` link is rendered, and the web-open helper only opens `http://` or `https://` URLs. SSH (`assssh://`) and RDP (`assrdp://`) behavior is unchanged.
 - Bundled Linux, Proxmox, and Windows overview dashboard view examples now include short usage notes at the top of each file.
 - Revoke agents search no longer shows a duplicate hint panel below the search input; the input placeholder text and 3-character gate remain unchanged.
 - Restructured the public documentation: `README.md` is now a concise landing page, `INSTALL.md` is installer-first, and a new `TROUBLESHOOTING.md` collects the operational checks and failure diagnosis previously mixed into `INSTALL.md`.
@@ -25,7 +26,7 @@
 
 ### Fixed
 - The Agent versions dashboard view now compares against the current bundled agent version (`0.8.0`) instead of a stale `0.7.3` constant, so up-to-date hosts are no longer shown as outdated.
-- Revoke agents cards now reliably hide and re-show when filtering: card visibility is kept in sync across the `hidden` attribute and inline display so matching rows are no longer left invisible after a search.
+- Revoke agents cards now reliably hide and re-show when filtering: a duplicate older search implementation was removed and card visibility is kept in sync across the `hidden` attribute and inline display, so matching rows are no longer left invisible after a search.
 
 ## v0.8.0
 

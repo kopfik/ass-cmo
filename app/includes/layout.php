@@ -102,7 +102,8 @@ function render_sidebar(array $ctx, array $views, ?string $selectedViewId, array
                         <?= h($link['label']) ?>
                     </a>
                 <?php else: ?>
-                    <a class="sidebar-tool-link <?= ($link['active'] ?? false) ? 'active' : '' ?>" href="<?= h($link['url']) ?>"<?= $target ?>>
+                    <?php $webUrlAttr = ($link['web_url'] ?? '') !== '' ? ' data-web-url="' . h($link['web_url']) . '"' : ''; ?>
+                    <a class="sidebar-tool-link <?= ($link['active'] ?? false) ? 'active' : '' ?>" href="<?= h($link['url']) ?>"<?= $webUrlAttr ?><?= $target ?>>
                         <?= h($link['label']) ?>
                     </a>
                 <?php endif; ?>

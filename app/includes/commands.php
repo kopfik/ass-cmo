@@ -101,10 +101,13 @@ function build_quick_links(array $ctx, string $active = ''): array {
     $adminerUrl = (string)$ctx['adminer_url'];
     $adminerLinkUrl = $adminerUrl;
     $adminerNewTab = true;
+    $adminerWebUrl = '';
 
     if (($ctx['assweb_protocol'] ?? false) && preg_match('~^https?://~i', $adminerUrl)) {
         $adminerLinkUrl = 'assweb://' . rawurlencode($adminerUrl);
         $adminerNewTab = false;
+        // Preserve raw HTTP(S) target for direct open in non-PWA browser mode.
+        $adminerWebUrl = $adminerUrl;
     }
 
     $links = [
@@ -112,7 +115,7 @@ function build_quick_links(array $ctx, string $active = ''): array {
     ];
 
     if ($adminerUrl !== '') {
-        $links[] = ['label' => 'Adminer', 'url' => $adminerLinkUrl, 'new_tab' => $adminerNewTab, 'active' => false];
+        $links[] = ['label' => 'Adminer', 'url' => $adminerLinkUrl, 'new_tab' => $adminerNewTab, 'active' => false, 'web_url' => $adminerWebUrl];
     }
 
     return $links;

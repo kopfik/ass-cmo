@@ -3,6 +3,23 @@
         return href.startsWith('assssh://') || href.startsWith('assrdp://') || href.startsWith('assweb://');
     }
 
+    // UI-only detection of PWA/standalone display. Not a security signal — it only
+    // decides whether web actions route through assweb:// or open HTTP(S) directly.
+    function isPwaStandalone() {
+        return window.matchMedia('(display-mode: standalone)').matches
+            || window.matchMedia('(display-mode: fullscreen)').matches
+            || window.matchMedia('(display-mode: minimal-ui)').matches
+            || window.navigator.standalone === true;
+    }
+
+    function openWebAction(url) {
+        if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) {
+            return;
+        }
+
+        window.open(url, '_blank', 'noopener,noreferrer');
+    }
+
     function openCustomProtocol(href) {
         const iframe = document.createElement('iframe');
         iframe.style.display = 'none';
@@ -59,6 +76,16 @@
 
         const link = event.target.closest('a[href^="assssh://"], a[href^="assrdp://"], a[href^="assweb://"]');
         if (!link) {
+            return;
+        }
+
+        // Web actions: in a normal browser tab open the raw HTTP(S) target directly
+        // (faster, no OS protocol round-trip). Keep assweb:// only in PWA/standalone
+        // mode. SSH/RDP always use their custom protocol.
+        const webUrl = link.dataset.webUrl;
+        if (link.href.startsWith('assweb://') && webUrl && !isPwaStandalone()) {
+            event.preventDefault();
+            openWebAction(webUrl);
             return;
         }
 
@@ -316,6 +343,7 @@
                     label: actionLabel,
                     subtitle: [ip, href].filter(Boolean).join(' · '),
                     href,
+                    webUrl: action.dataset.webUrl || '',
                     type,
                     actionClass,
                     priority: launcherActionPriority(type),
@@ -457,12 +485,18 @@
 
         closeLauncher();
 
+        // Web actions open the raw HTTP(S) target directly outside PWA/standalone mode.
+        if (command.href.startsWith('assweb://') && command.webUrl && !isPwaStandalone()) {
+            openWebAction(command.webUrl);
+            return;
+        }
+
         if (isCustomProtocol(command.href)) {
             openCustomProtocol(command.href);
             return;
         }
 
-        window.open(command.href, '_blank', 'noopener,noreferrer');
+        openWebAction(command.href);
     }
 
     document.addEventListener('click', event => {

@@ -97,12 +97,20 @@ function notes_app_links(string $notes, bool $asswebProtocol = false): array {
                 $class = 'shell';
             }
 
-            $links[] = [
+            $link = [
                 'label' => $label,
                 'url' => $href,
                 'class' => $class,
                 'new_tab' => !$asswebProtocol,
             ];
+
+            // In assweb:// mode, preserve the raw HTTP(S) target so the frontend
+            // can open it directly when not running as a PWA. UX routing only.
+            if ($asswebProtocol) {
+                $link['web_url'] = $url;
+            }
+
+            $links[] = $link;
         }
     }
 
@@ -215,7 +223,8 @@ function render_action_buttons(array $row, array $ctx): string {
         }
 
         $target = $action['new_tab'] ? ' target="_blank" rel="noopener noreferrer"' : '';
-        $html .= '<a class="action action-' . h($action['class']) . '" href="' . h($action['url']) . '"' . $target . '>' . h($action['label']) . '</a>';
+        $webUrlAttr = isset($action['web_url']) ? ' data-web-url="' . h($action['web_url']) . '"' : '';
+        $html .= '<a class="action action-' . h($action['class']) . '" href="' . h($action['url']) . '"' . $webUrlAttr . $target . '>' . h($action['label']) . '</a>';
     }
 
     return $html;
