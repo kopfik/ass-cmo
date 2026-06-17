@@ -1694,15 +1694,12 @@ button.action {
     background: var(--panel-bg);
 }
 
+/* Geometry (display/padding/radius/font/min-height/line-height) is inherited
+ * from the shared compact-pill block so Ctrl+K badges match `.app-v2 .action`
+ * row buttons exactly. Only launcher-specific layout is set here. */
 .command-launcher-badge {
-    display: inline-block;
     flex: 0 0 auto;
     margin: 0;
-    padding: 4px 7px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 700;
-    line-height: 1.2;
     color: var(--button-action-text);
     background: var(--button-action-bg);
     white-space: nowrap;
