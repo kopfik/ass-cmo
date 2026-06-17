@@ -118,6 +118,18 @@ These items are tracked after the final internal `v0.7.5` pre-public review snap
   - Require explicit non-placeholder URL for direct execution.
   - Accept only `http://`/`https://`, require host, and reject query/fragment.
 
+- [ ] `hardening` Revoked and disabled agents should self-disable future inventory submissions after receiving an explicit machine-readable server response.
+  - Server should return a distinct machine-readable status (for example `agent_revoked` or `agent_disabled`) for inventory requests using revoked or disabled credentials, separate from a generic `403`.
+  - Linux and Windows agents should detect that response, stop their scheduled task or timer, and write a local log entry stating the reason. They should not retry automatically.
+  - Self-disable means the agent binary and local config remain on the host; fresh re-enrollment requires the operator to rerun the installer.
+  - Server-driven command execution or remote uninstall is explicitly out of scope.
+
+- [ ] `hardening` Add an admin-confirmed credential replacement flow for enrollment requests where the UID already has an agent credential.
+  - Current behavior auto-denies duplicate-UID approval. Future improvement: show a conflict UI with Cancel and Replace existing credential options.
+  - Replace must atomically archive or revoke the existing credential (preserving audit metadata) and issue a fresh per-host secret for the approved pending enrollment request in a single safe transaction.
+  - Only the admin-initiated Replace action in the UI may trigger replacement; agent polling with `request_id` plus `poll_token` alone must never be sufficient to replace an existing credential.
+  - Do not silently delete existing credential history; archive or mark revoked only.
+
 - [x] `docs` Restructure INSTALL into a public quickstart and advanced sections.
   - Fresh public install.
   - Server configuration.
