@@ -231,6 +231,19 @@ UX direction: the installer initiates enrollment and the pairing code appears on
 - [ ] `later` Optional helper for private/shared-token deployments: document or script manual migration from 0.7.x shared inventory token configs to per-host secrets. This is not a public v0.8.0 release blocker.
 - [ ] `later` Redesign Agent auth view for larger deployments: move from card-per-host layout to a searchable/filterable table with row-level Revoke actions and explicit named host confirmation before revoke. Preserve visibility of auth-health anomalies such as never-authenticated or long-inactive credentials. Current card layout is intentional for the small-fleet v0.8.0 case; this is a post-public scalability improvement.
 - [ ] `later` Light Enrollment approvals UX polish: keep the pairing-code-first card workflow and the prominent pairing code display (visual confirmation is the security intent, not convenience). Consider adding a pending request count or badge and an improved empty state for when no requests are waiting.
+- [ ] `later` Keep launcher integration compatible with future team / personalized use. Design note only, no implementation decided.
+  - Do not assume a single shared `connection_name` will suit every admin.
+  - A shared/default connection hint may still be useful.
+  - Per-admin preferences/mappings may be needed later, once local users/login exist.
+  - Notes/tags must not be repurposed as a launcher configuration language.
+  - Launch links should preserve stable host identity and a safe fallback host/user/port.
+  - The concrete login/user-preference/per-admin launcher-mapping implementation is intentionally undecided for now.
+- [ ] `later` Move dashboard version checks toward DB-backed reference data. Design note only, no schema/implementation decided.
+  - Hold expected ASS-CMO/app/agent/helper versions once in a simple ASS-CMO-owned versions table.
+  - Hold inventory-derived platform/kernel versions in a separate observed-versions table, if they can be safely normalized.
+  - Dashboard SQL views should over time read values from the DB instead of hardcoded constants / placeholders.
+  - Schema, migrations, and release/update workflow are intentionally undecided for now.
+  - Expected ASS-CMO/agent versions must not change agent submissions; observed kernel/platform versions may eventually be updated by the inventory flow only for safely derived values.
 
 ---
 
