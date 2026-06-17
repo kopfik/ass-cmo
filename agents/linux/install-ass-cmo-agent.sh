@@ -13,14 +13,54 @@ DEFAULT_ENROLL_TIMEOUT=1800
 if [ -t 1 ]; then
     _ESC="$(printf '\033')"
     TTY_BOLD="${_ESC}[1m"
+    TTY_RED="${_ESC}[1;31m"
+    TTY_GREEN="${_ESC}[1;32m"
+    TTY_YELLOW="${_ESC}[1;33m"
+    TTY_BLUE="${_ESC}[1;34m"
     TTY_CYAN="${_ESC}[0;36m"
     TTY_RESET="${_ESC}[0m"
     unset _ESC
 else
     TTY_BOLD=''
+    TTY_RED=''
+    TTY_GREEN=''
+    TTY_YELLOW=''
+    TTY_BLUE=''
     TTY_CYAN=''
     TTY_RESET=''
 fi
+
+# Console output helpers in a compact pacman/makepkg-like style. They emit plain
+# text automatically when stdout is not a TTY because the color variables above
+# are empty in that case. Messages are passed as %s arguments, never as the
+# format string, so values cannot be interpreted as printf directives.
+log_section() {
+    printf '%s\n' "${TTY_BLUE}::${TTY_RESET} ${TTY_BOLD}$1${TTY_RESET}"
+}
+
+log_step() {
+    printf '%s\n' "${TTY_GREEN}==>${TTY_RESET} ${TTY_BOLD}$1${TTY_RESET}"
+}
+
+log_info() {
+    printf '%s\n' "  ${TTY_BLUE}->${TTY_RESET} $1"
+}
+
+log_ok() {
+    printf '%s\n' "${TTY_GREEN}==>${TTY_RESET} ${TTY_GREEN}$1${TTY_RESET}"
+}
+
+log_wait() {
+    printf '%s\n' "${TTY_YELLOW}==>${TTY_RESET} $1"
+}
+
+log_warn() {
+    printf '%s\n' "${TTY_YELLOW}==> WARNING:${TTY_RESET} $1" >&2
+}
+
+log_error() {
+    printf '%s\n' "${TTY_RED}==> ERROR:${TTY_RESET} $1" >&2
+}
 
 usage() {
     echo "Usage: $0 --base-url URL" >&2
@@ -28,7 +68,7 @@ usage() {
 
 need_cmd() {
     command -v "$1" >/dev/null 2>&1 || {
-        echo "ERROR: $1 not found" >&2
+        log_error "$1 not found"
         exit 1
     }
 }
@@ -131,7 +171,7 @@ while [ "$#" -gt 0 ]; do
             exit 0
             ;;
         *)
-            echo "ERROR: unknown argument: $1" >&2
+            log_error "unknown argument: $1"
             usage
             exit 2
             ;;
@@ -140,17 +180,21 @@ while [ "$#" -gt 0 ]; do
 done
 
 if [ "$(id -u)" -ne 0 ]; then
-    echo "ERROR: this installer must be run as root" >&2
+    log_error "this installer must be run as root"
     exit 1
 fi
 
 if [ -z "$BASE_URL" ]; then
-    echo "ERROR: --base-url is required" >&2
+    log_error "--base-url is required"
     usage
     exit 2
 fi
 
 BASE_URL="${BASE_URL%/}"
+
+log_section "Installing ASS-CMO Linux agent"
+log_info "Base URL: $BASE_URL"
+log_info "Config file: $CONFIG_FILE"
 
 need_cmd curl
 need_cmd jq
@@ -161,14 +205,15 @@ trap 'rm -rf "$tmpdir"' EXIT
 download() {
     url="$1"
     dst="$2"
-    echo "Downloading $url"
+    log_info "Downloading $url"
     curl -fsSL --retry 3 --retry-delay 2 --connect-timeout 10 --max-time 120 "$url" -o "$dst"
     if [ ! -s "$dst" ]; then
-        echo "ERROR: downloaded file is missing or empty: $url" >&2
+        log_error "downloaded file is missing or empty: $url"
         exit 1
     fi
 }
 
+log_step "Downloading agent files"
 download "$BASE_URL/agents/linux/ass-cmo-agent" "$tmpdir/ass-cmo-agent"
 download "$BASE_URL/agents/linux/VERSION" "$tmpdir/VERSION"
 download "$BASE_URL/agents/linux/ass-cmo-agent.service" "$tmpdir/ass-cmo-agent.service"
@@ -185,7 +230,7 @@ agent_version="${agent_version:-unknown-install}"
 
 if [ -f "$CONFIG_FILE" ]; then
     chmod 600 "$CONFIG_FILE"
-    echo "Keeping existing config: $CONFIG_FILE"
+    log_info "Keeping existing config: $CONFIG_FILE"
 else
     start_body="$tmpdir/enroll-start.json"
     start_response="$tmpdir/enroll-start-response.json"
@@ -203,9 +248,10 @@ else
         --arg agent_version "$agent_version" \
         '{uid: $uid, hostname: $hostname, fqdn: $fqdn, os_type: "linux", agent_version: $agent_version}' > "$start_body"
 
+    log_step "Requesting enrollment"
     start_code="$(curl -sS -o "$start_response" -w '%{http_code}' --connect-timeout 10 --max-time 30 -H 'Content-Type: application/json' --data-binary "@$start_body" "$BASE_URL/enroll.php")"
     if [ "$start_code" != "200" ]; then
-        echo "ERROR: enrollment start failed (HTTP $start_code)" >&2
+        log_error "enrollment start failed (HTTP $start_code)"
         exit 1
     fi
 
@@ -216,7 +262,7 @@ else
     enroll_timeout="$(json_int_or_default expires_in "$start_response" "$DEFAULT_ENROLL_TIMEOUT")"
 
     if [ -z "$request_id" ] || [ -z "$poll_token" ] || [ -z "$pairing_code" ]; then
-        echo "ERROR: enrollment start response is missing required fields" >&2
+        log_error "enrollment start response is missing required fields"
         exit 1
     fi
 
@@ -227,16 +273,18 @@ else
     printf 'header = "X-Poll-Token: %s"\n' "$poll_token" > "$poll_curl_config"
 
     printf '\n'
-    printf '%s\n' "${TTY_BOLD}==> Enrollment approval required${TTY_RESET}"
-    printf 'Enrollment pairing code: %s\n' "${TTY_BOLD}${pairing_code}${TTY_RESET}"
+    log_step "Enrollment approval required"
+    log_info "Pairing code: ${TTY_BOLD}${pairing_code}${TTY_RESET}"
     if [ -n "$verification_url" ]; then
-        printf 'Approve this enrollment at:\n'
-        printf '  %s\n' "${TTY_CYAN}${verification_url}${TTY_RESET}"
+        log_info "Approve this enrollment at:"
+        printf '     %s\n' "${TTY_CYAN}${verification_url}${TTY_RESET}"
     else
-        printf 'Approve this pending enrollment in the ASS-CMO admin UI for:\n'
-        printf '  %s\n' "${TTY_CYAN}${BASE_URL}${TTY_RESET}"
+        log_info "Approve this pending enrollment in the ASS-CMO admin UI for:"
+        printf '     %s\n' "${TTY_CYAN}${BASE_URL}${TTY_RESET}"
     fi
     printf '\n'
+
+    log_wait "Waiting for approval (checking every ${poll_interval}s, timeout ${enroll_timeout}s)..."
 
     start_ts="$(date +%s)"
 
@@ -254,43 +302,44 @@ else
                     pending)
                         now_ts="$(date +%s)"
                         if [ $((now_ts - start_ts)) -ge "$enroll_timeout" ]; then
-                            echo "ERROR: enrollment approval timed out" >&2
+                            log_error "enrollment approval timed out"
                             exit 1
                         fi
                         sleep "$poll_interval"
                         ;;
                     denied)
-                        echo "ERROR: enrollment request was denied" >&2
+                        log_error "enrollment request was denied"
                         exit 1
                         ;;
                     approved)
                         agent_secret="$(json_get_string agent_secret "$poll_response")"
                         if [ -z "$agent_secret" ]; then
-                            echo "ERROR: approved enrollment response did not include agent_secret" >&2
+                            log_error "approved enrollment response did not include agent_secret"
                             exit 1
                         fi
                         write_agent_config "$agent_secret" "$config_tmp"
-                        echo "Enrollment approved and local agent config created: $CONFIG_FILE"
+                        log_ok "Enrollment approved; local agent config created: $CONFIG_FILE"
                         break
                         ;;
                     *)
-                        echo "ERROR: unexpected enrollment poll status" >&2
+                        log_error "unexpected enrollment poll status"
                         exit 1
                         ;;
                 esac
                 ;;
             404)
-                echo "ERROR: enrollment request expired or was not found" >&2
+                log_error "enrollment request expired or was not found"
                 exit 1
                 ;;
             *)
-                echo "ERROR: enrollment poll failed (HTTP $poll_code)" >&2
+                log_error "enrollment poll failed (HTTP $poll_code)"
                 exit 1
                 ;;
         esac
     done
 fi
 
+log_step "Installing agent and systemd units"
 install -d -m 755 /usr/share/ass-cmo-agent
 install -m 644 "$tmpdir/VERSION" /usr/share/ass-cmo-agent/VERSION
 install -m 755 "$tmpdir/ass-cmo-agent" /usr/local/sbin/ass-cmo-agent
@@ -309,9 +358,11 @@ if [ -f /etc/debian_version ]; then
     install -m 644 "$tmpdir/99ass-cmo-agent" /etc/apt/apt.conf.d/99ass-cmo-agent
 fi
 
+log_step "Configuring systemd timer"
 systemctl daemon-reload
 systemctl enable --now ass-cmo-agent.timer
 
+log_step "Running first inventory submission"
 /usr/local/sbin/ass-cmo-agent
 
-echo "OK: ASS-CMO Linux agent installed"
+log_ok "ASS-CMO Linux agent installed"
