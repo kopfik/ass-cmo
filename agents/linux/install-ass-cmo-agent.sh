@@ -8,6 +8,20 @@ DEFAULT_AGENT_CHANNEL="stable"
 DEFAULT_POLL_INTERVAL=5
 DEFAULT_ENROLL_TIMEOUT=1800
 
+# TTY-aware color codes. Empty when stdout is not a terminal so piped/logged
+# output stays readable without escape sequences.
+if [ -t 1 ]; then
+    _ESC="$(printf '\033')"
+    TTY_BOLD="${_ESC}[1m"
+    TTY_CYAN="${_ESC}[0;36m"
+    TTY_RESET="${_ESC}[0m"
+    unset _ESC
+else
+    TTY_BOLD=''
+    TTY_CYAN=''
+    TTY_RESET=''
+fi
+
 usage() {
     echo "Usage: $0 --base-url URL" >&2
 }
@@ -212,12 +226,17 @@ else
     umask 077
     printf 'header = "X-Poll-Token: %s"\n' "$poll_token" > "$poll_curl_config"
 
-    echo "Enrollment pairing code: $pairing_code"
+    printf '\n'
+    printf '%s\n' "${TTY_BOLD}==> Enrollment approval required${TTY_RESET}"
+    printf 'Enrollment pairing code: %s\n' "${TTY_BOLD}${pairing_code}${TTY_RESET}"
     if [ -n "$verification_url" ]; then
-        echo "Approve this enrollment at: $verification_url"
+        printf 'Approve this enrollment at:\n'
+        printf '  %s\n' "${TTY_CYAN}${verification_url}${TTY_RESET}"
     else
-        echo "Approve this pending enrollment in the ASS-CMO admin UI for $BASE_URL"
+        printf 'Approve this pending enrollment in the ASS-CMO admin UI for:\n'
+        printf '  %s\n' "${TTY_CYAN}${BASE_URL}${TTY_RESET}"
     fi
+    printf '\n'
 
     start_ts="$(date +%s)"
 
