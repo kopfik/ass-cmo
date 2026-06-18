@@ -505,7 +505,7 @@ render_head('ASS-CMO Dashboard', $ctx);
     <div class="command-launcher-backdrop" data-launcher-close="1"></div>
     <div class="command-launcher-panel" role="dialog" aria-modal="true" aria-label="Command launcher">
         <div class="command-launcher-input-wrap">
-            <span class="command-launcher-prefix">⌘K</span>
+            <img class="command-launcher-prefix" src="/branding/logo/icon-192.png" alt="" aria-hidden="true" width="28" height="28">
             <input id="command-launcher-input" class="command-launcher-input" type="search" placeholder="Type hostname, IP, SSH, RDP, WEB action..." autocomplete="off">
         </div>
         <div id="command-launcher-results" class="command-launcher-results"></div>
