@@ -698,3 +698,10 @@ Suggested wording:
 ### Legacy runtime database owner cleanup
 
 - [ ] `cleanup` Optionally migrate older deployments that still use the legacy PostgreSQL owner/user name `assrmm` to the current `asscmo` naming. This is not an immediate blocker because the dashboard uses the read-only `ass_dashboarder` role and new/example configs use `asscmo`.
+
+### v0.8.2 candidate: DB-backed version expectations
+
+- [ ] `0.8.2` Add a small DB-backed versions/expected_versions table for ASS-CMO app, bundled Linux agent, bundled Windows agent, helper/handler versions, and optional observed platform/kernel baselines as needed.
+  - Goal: stop hardcoding expected agent versions directly in dashboard SQL views.
+  - Use it to simplify Agent versions and future update/status dashboard views.
+  - Current `main` already contains a hotfix for `50-agent-versions.sql` after `v0.8.1`; do not retag `v0.8.1`.
