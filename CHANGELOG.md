@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.8.1
 - Reworked dashboard CSS into a token-driven theme structure and polished filter/search control colors across bundled themes.
 
 ### Added
@@ -26,7 +26,7 @@
 - Ignored the local `_sandbox/` scratch workspace used for prototype/iteration work so it is never committed.
 
 ### Fixed
-- The Agent versions dashboard view now compares against the current bundled agent version (`0.8.0`) instead of a stale `0.7.3` constant, so up-to-date hosts are no longer shown as outdated.
+- The Agent versions dashboard view now compares against the current bundled Linux and Windows agent versions instead of a stale `0.7.3` constant, so up-to-date hosts are no longer shown as outdated.
 - Revoke agents cards now reliably hide and re-show when filtering: a duplicate older search implementation was removed and card visibility is kept in sync across the `hidden` attribute and inline display, so matching rows are no longer left invisible after a search.
 
 ## v0.8.0
