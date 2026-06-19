@@ -94,7 +94,12 @@ function Test-RebootRequired {
             if ($Path -eq "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager") {
                 $PendingRename = Get-ItemProperty -Path $Path -Name "PendingFileRenameOperations" -ErrorAction SilentlyContinue
                 if ($null -ne $PendingRename) {
-                    return $true
+                    $Entries = $PendingRename.PendingFileRenameOperations
+                    foreach ($Entry in @($Entries)) {
+                        if (-not [string]::IsNullOrWhiteSpace($Entry)) {
+                            return $true
+                        }
+                    }
                 }
             } else {
                 if (Test-Path $Path) {
