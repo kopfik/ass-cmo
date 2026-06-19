@@ -25,14 +25,15 @@ WITH normalized AS (
     WHERE i.os_name ILIKE '%microsoft%' OR i.os_name ILIKE '%windows%'
 ),
 kernel_stats AS (
-    SELECT DISTINCT ON (os_family, os_major, os_track)
+    SELECT DISTINCT ON (os_name, os_family, os_major, os_track)
+        os_name,
         os_family,
         os_major,
         os_track,
         kernel_version AS latest_known,
         kernel_sort_key AS latest_sort_key
     FROM normalized
-    ORDER BY os_family, os_major, os_track, kernel_sort_key DESC, system_upgrade_time DESC NULLS LAST, inventory_update_time DESC NULLS LAST
+    ORDER BY os_name, os_family, os_major, os_track, kernel_sort_key DESC, system_upgrade_time DESC NULLS LAST, inventory_update_time DESC NULLS LAST
 )
 SELECT
     n.hostname,
@@ -45,14 +46,24 @@ SELECT
     n.location,
     n.primary_ipv4_addr AS ip,
     date_trunc('minute', justify_interval(now() - n.system_boot_time)) AS uptime,
-    n.kernel_version,
+    n.kernel_version AS kernel,
     ks.latest_known,
-    n.disk_usage_percent || '%' AS disk,
+    CASE
+        WHEN n.disk_usage_percent IS NULL THEN '⬜ unknown'
+        WHEN n.disk_usage_percent <= 50 THEN '🟩 ' || n.disk_usage_percent || '%'
+        WHEN n.disk_usage_percent <= 65 THEN '🟨 ' || n.disk_usage_percent || '%'
+        WHEN n.disk_usage_percent <= 80 THEN '🟧 ' || n.disk_usage_percent || '%'
+        ELSE '🟥 ' || n.disk_usage_percent || '%'
+    END AS disk,
     n.os_name,
-    notes,
-    date_trunc('second', n.inventory_update_time AT TIME ZONE 'Europe/Prague') AS last_seen
+    date_trunc('second', n.inventory_update_time AT TIME ZONE 'Europe/Prague') AS last_seen,
+    notes
 FROM normalized n
-JOIN kernel_stats ks ON ks.os_family = n.os_family AND ks.os_major = n.os_major AND ks.os_track = n.os_track
+JOIN kernel_stats ks
+    ON ks.os_name = n.os_name
+   AND ks.os_family = n.os_family
+   AND ks.os_major = n.os_major
+   AND ks.os_track = n.os_track
 ORDER BY
     CASE
         WHEN n.reboot_required = true THEN 1
