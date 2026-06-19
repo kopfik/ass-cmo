@@ -6,22 +6,10 @@ SELECT
     hostname,
     primary_ipv4_addr AS ip,
     CASE
-        WHEN os_name ILIKE '%microsoft%' OR os_name ILIKE '%windows%' THEN 'windows'
-        ELSE 'linux'
-    END AS platform,
-    CASE
         WHEN os_name ILIKE '%microsoft%' OR os_name ILIKE '%windows%' THEN
-            CASE
-                WHEN agent_platform = 'linux' AND agent_version = '0.8.0' THEN '✅ latest'
-                WHEN agent_platform = 'windows' AND agent_version = '0.8.1' THEN '✅ latest'
-                ELSE '⚠️OUTDATED'
-            END
+            CASE WHEN agent_version = '0.8.1' THEN '🟢 LATEST' ELSE '🟠 OUTDATED' END
         ELSE
-            CASE
-                WHEN agent_platform = 'linux' AND agent_version = '0.8.0' THEN '✅ latest'
-                WHEN agent_platform = 'windows' AND agent_version = '0.8.1' THEN '✅ latest'
-                ELSE '⚠️OUTDATED'
-            END
+            CASE WHEN agent_version = '0.8.0' THEN '🟢 LATEST' ELSE '🟠 OUTDATED' END
     END AS agent_status,
     agent_version,
     date_trunc('second', agent_update_time AT TIME ZONE 'Europe/Prague') AS agent_update_time,
@@ -31,17 +19,9 @@ FROM inventory
 ORDER BY
     CASE
         WHEN os_name ILIKE '%microsoft%' OR os_name ILIKE '%windows%' THEN
-            CASE
-                WHEN agent_platform = 'linux' AND agent_version = '0.8.0' THEN 2
-                WHEN agent_platform = 'windows' AND agent_version = '0.8.1' THEN 2
-                ELSE 1
-            END
+            CASE WHEN agent_version = '0.8.1' THEN 2 ELSE 1 END
         ELSE
-            CASE
-                WHEN agent_platform = 'linux' AND agent_version = '0.8.0' THEN 2
-                WHEN agent_platform = 'windows' AND agent_version = '0.8.1' THEN 2
-                ELSE 1
-            END
+            CASE WHEN agent_version = '0.8.0' THEN 2 ELSE 1 END
     END,
     os_name,
     agent_version,
