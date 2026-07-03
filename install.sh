@@ -120,6 +120,17 @@ ask_yes_no_default_yes() {
   esac
 }
 
+ask_yes_no_default_no() {
+  prompt="$1"
+  detail "$prompt"
+  prompt_line "answer [y/N]: "
+  IFS= read -r answer || answer=""
+  case "$answer" in
+    y|Y|yes|YES|Yes) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 rand_b64() {
   openssl rand -base64 "$1"
 }
@@ -129,7 +140,7 @@ set_env() {
   value="$2"
   file="$3"
 
-  escaped="$(printf '%s' "$value" | sed 's/[\/&]/\\&/g')"
+  escaped="$(printf '%s' "$value" | sed 's/[\/&|]/\\&/g')"
 
   if grep -q "^${key}=" "$file"; then
     sed -i "s|^${key}=.*|${key}=${escaped}|" "$file"
@@ -447,7 +458,7 @@ set_env_if_missing_or_weak() {
   file="$3"
 
   current="$(get_env "$key" "$file")"
-  if [ -z "$current" ] || [ "$current" = "changeme" ] || [ "$current" = "change-me" ] || printf '%s' "$current" | grep -q '^change-this'; then
+  if [ -z "$current" ] || [ "$current" = "changeme" ] || [ "$current" = "change-me" ] || printf '%s' "$current" | grep -q -e '^change-this' -e '^REPLACE_ME'; then
     set_env "$key" "$value" "$file"
   fi
 }
@@ -608,7 +619,12 @@ else
 fi
 
 if [ "$use_existing_env" -eq 1 ] && { [ "$(get_env ASSCMO_INSTANCE_NAME "$ENV_FILE")" = "ass-cmo.example.com" ] || [ -z "$(get_env ASSCMO_INSTANCE_NAME "$ENV_FILE")" ]; }; then
-  use_existing_env=0
+  warn "Existing $ENV_FILE has an empty or example-placeholder ASSCMO_INSTANCE_NAME."
+  if ask_yes_no_default_no "Replace the whole $ENV_FILE with a fresh copy of .env.example? All custom values in it will be LOST."; then
+    use_existing_env=0
+  else
+    info "Keeping existing $ENV_FILE; only missing/weak values will be filled."
+  fi
 fi
 
 if [ "$use_existing_env" -eq 0 ]; then
@@ -642,7 +658,7 @@ if [ "$use_existing_env" -eq 0 ]; then
   set_env POSTGRES_DASHBOARD_USER "$dashboard_user" "$ENV_FILE"
   set_env ASSCMO_DASHBOARD_SSH_USER "$ssh_user" "$ENV_FILE"
 else
-  if [ -z "$(get_env ASSCMO_INSTANCE_NAME "$ENV_FILE")" ]; then
+  if [ -z "$(get_env ASSCMO_INSTANCE_NAME "$ENV_FILE")" ] || [ "$(get_env ASSCMO_INSTANCE_NAME "$ENV_FILE")" = "ass-cmo.example.com" ]; then
     tls_cert_name_existing="$(choose_letsencrypt_cert)"
     if [ -n "$tls_cert_name_existing" ]; then
       instance_name="$(ask_default "Enter ASS-CMO instance hostname" "$(default_instance_hostname_for_cert "$tls_cert_name_existing")")"
@@ -744,7 +760,7 @@ detail "Dashboard URL"
 value "https://$(get_env ASSCMO_INSTANCE_NAME "$ENV_FILE")/"
 
 detail "Linux URI handlers"
-value "curl -fsSL https://$(get_env ASSCMO_INSTANCE_NAME "$ENV_FILE")/agents/handlers/linux/install-ass-cmo-uri-handlers.sh | sh"
+value "curl -fsSL https://$(get_env ASSCMO_INSTANCE_NAME "$ENV_FILE")/agents/handlers/linux/install-ass-cmo-uri-handlers.sh | ASSCMO_HANDLER_BASE_URL=https://$(get_env ASSCMO_INSTANCE_NAME "$ENV_FILE") sh"
 
 detail "Windows URI handlers"
 value "Invoke-WebRequest -UseBasicParsing \"https://$(get_env ASSCMO_INSTANCE_NAME "$ENV_FILE")/agents/handlers/windows/install-ass-cmo-uri-handlers.ps1\" -OutFile \"\$env:TEMP\\install-ass-cmo-uri-handlers.ps1\"; powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"\$env:TEMP\\install-ass-cmo-uri-handlers.ps1\""

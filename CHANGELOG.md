@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Security
+- Fresh installs can no longer end up with predictable enrollment placeholder secrets. The installer now treats `REPLACE_ME*` values in `config.local/.env` as weak and regenerates them, and runtime fails closed when `ASSCMO_ENROLLMENT_PEPPER` or `ASSCMO_ENROLLMENT_APPROVE_TOKEN` still contains a `REPLACE_ME*` placeholder (enrollment pepper throws, approve endpoint returns 403). Previously only the older `change-this-*` placeholders were detected, so a fresh install copying `.env.example` kept the public placeholder pepper and approve token.
+
+### Fixed
+- The documented Linux URI-handler install command in `INSTALL.md` and in the installer's final output now includes the required `ASSCMO_HANDLER_BASE_URL=...` variable, matching the command the dashboard generates. The previous short `curl ... | sh` form failed when piped because the handler installer cannot detect the server URL on the admin workstation.
+- The installer no longer silently overwrites an existing `config.local/.env` whose `ASSCMO_INSTANCE_NAME` is empty or still the example placeholder. It now warns and asks an explicit confirmation with No as the default answer; when declined, the existing file is kept, only missing/weak values are filled, and the instance hostname is asked again.
+- Installer `.env` writes now also escape the `|` character, so a value containing it can no longer corrupt the generated `sed` expression.
+
+### Changed
+- The bundled Agent versions dashboard view now documents how to enable the AGENT UPDATE ONELINER row action by exposing an `agent_state` column with value `outdated` (optionally with `agent_platform`); the visible `agent_status` column is display-only.
+
 ### Removed
 - Removed the optional Grafana / TIM / TIGM (Telegraf / InfluxDB / Grafana / Mosquitto) monitoring overlays from the repository: `compose.grafana.yml`, `compose.tigm.yml`, the `config.example/grafana/`, `config.example/mosquitto/` and `config.example/telegraf/` example configs, their `.env.example` variables, installer prompts and generated secrets, and the related `.gitignore` entries. These overlays are not part of the supported ASS-CMO core. For transparency: **the last release tag that still contains the full overlay stack is `v0.8.1`** — branch or check out that tag if you want to keep using them. They remain unsupported. Existing deployments are not touched by this change; operators can manually remove leftover `GRAFANA_*` / `INFLUX*` / `TELEGRAF_*` / `MQTT_PORT` variables from `config.local/.env` and the unused `config.local/grafana|influxdb|mosquitto|telegraf` directories.
 

@@ -254,7 +254,7 @@ The dashboard generates client-side connection links such as `assssh://10.20.30.
 Linux desktop installer:
 
 ```bash
-curl -fsSL https://ass-cmo.example.com/agents/handlers/linux/install-ass-cmo-uri-handlers.sh | sh
+curl -fsSL https://ass-cmo.example.com/agents/handlers/linux/install-ass-cmo-uri-handlers.sh | ASSCMO_HANDLER_BASE_URL=https://ass-cmo.example.com sh
 ```
 
 Windows installer:

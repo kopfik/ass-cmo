@@ -1,6 +1,7 @@
 -- label: Agent versions
 -- description: Agent bundle version overview.
 -- Expected versions in this view must be kept in sync with agents/linux/VERSION and agents/windows/VERSION before each release.
+-- Optional: expose a column named agent_state with value 'outdated' (and optionally agent_platform with 'linux'/'windows') to make the dashboard add an AGENT UPDATE ONELINER copy action on that row. The agent_status column below is display-only and does not trigger actions.
 
 SELECT
     hostname,

@@ -578,6 +578,8 @@ Suggested wording:
 
 ### Agents
 
+- [ ] `hardening` Windows agent: parse `Win32_QuickFixEngineering.InstalledOn` culture-safely (e.g. `[DateTime]::Parse(..., InvariantCulture)`). On non-US locales (Czech, German) the current direct `[datetime]` cast of a localized date string can throw; the surrounding try/catch then silently nulls the system upgrade time. (July 2026 multi-AI review finding, unverified on real localized hosts.)
+- [ ] `cleanup` Linux agent: CPU model detection on ARM. `/proc/cpuinfo` on ARM64/SBC targets may not contain a `model name` line, and the `|| echo "Unknown"` fallback never triggers because the pipeline ends with `xargs` exiting 0 — affected hosts report an empty CPU model instead of `Unknown`. Add a fallback source (e.g. `lscpu`) or at least make the Unknown fallback actually work. (July 2026 multi-AI review finding.)
 - [ ] `hardening` Run ShellCheck-style audit on Linux agent scripts.
 - [ ] `hardening` Quote shell variables consistently.
 - [ ] `hardening` Review `set -e` / `set -u` edge cases.
@@ -599,6 +601,7 @@ Suggested wording:
 
 ## Documentation
 
+- [ ] `docs` Recapture install screenshots (`docs/images/install/{dark,light}/01..03`) from a current core-only installer run: they still show Grafana/InfluxDB prompts and credentials from before the overlay removal. Opportunistically refresh dashboard screenshots (old "Agent auth" sidebar naming). Do this before the next release tag.
 - [x] `docs` Add `SECURITY.md`.
 - [ ] `docs` Add deployment hardening checklist.
 - [ ] `docs` Add handler threat model.
@@ -616,6 +619,7 @@ Suggested wording:
 
 - Gemini review: high-level security and maintainability review, June 2026.
 - Claude review: high-level code review, June 2026.
+- Multi-AI release review (GPT, Gemini, Claude) of the post-overlay-removal tree, July 2026: found the enrollment placeholder-secret blocker, the Linux URI-handler command drift, stale install screenshots, and the agent locale/ARM observations tracked above.
 - Internal manual testing: Linux/KDE/Yakuake, Windows VM, PWA/assweb workflow.
 
 ---

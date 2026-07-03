@@ -16,7 +16,7 @@ function env_bool(string $key, bool $default = false): bool {
 function asscmo_enrollment_pepper(): string {
     $pepper = trim(envv('ASSCMO_ENROLLMENT_PEPPER', ''));
 
-    if ($pepper === '' || $pepper === 'change-this-enrollment-pepper') {
+    if ($pepper === '' || $pepper === 'change-this-enrollment-pepper' || str_starts_with($pepper, 'REPLACE_ME')) {
         throw new RuntimeException('ASS-CMO enrollment pepper is not configured.');
     }
 

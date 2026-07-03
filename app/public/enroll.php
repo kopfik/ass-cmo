@@ -101,7 +101,7 @@ function enroll_poll_token_header(): string {
 
 function enroll_require_approve_authorization(): void {
     $expectedToken = trim(envv('ASSCMO_ENROLLMENT_APPROVE_TOKEN', ''));
-    if ($expectedToken === '' || $expectedToken === 'change-this-enrollment-approve-token') {
+    if ($expectedToken === '' || $expectedToken === 'change-this-enrollment-approve-token' || str_starts_with($expectedToken, 'REPLACE_ME')) {
         enroll_error(403, 'Forbidden');
     }
 
