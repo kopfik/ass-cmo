@@ -260,14 +260,16 @@ The official ASS-CMO core is:
 - admin overview dashboard
 - local SSH / RDP / web connection launchers
 
-This is a planned pre-v1.0.0 cleanup item. No immediate code removal is required now.
+This cleanup is done: the overlays were removed from the repository in July 2026 (post-`v0.8.1`). The last release tag that still contains the full overlay stack is `v0.8.1`; this is documented in `README.md` and `CHANGELOG.md` so anyone who wants the overlays can branch from that tag without searching history.
 
 This supersedes the older "advanced/lab-only until hardened" wording: these overlays are no longer planned as part of the supported core stack.
 
 - [x] `pre-1.0.0` `cleanup` Update `README.md` to stop presenting Grafana / TIM / TIGM overlays as supported or current ASS-CMO features. Reframe them as historical/optional if mentioned at all.
 - [x] `pre-1.0.0` `cleanup` Update `INSTALL.md` to remove any guidance that implies the Grafana / TIM / TIGM / InfluxDB / Telegraf / MQTT stack is part of the standard install path.
-- [ ] `pre-1.0.0` `cleanup` Review `.env.example` and remove or clearly mark as optional any variables that exist solely for the Grafana / TIM / TIGM overlay, unless they are also required by the core stack.
-- [ ] `pre-1.0.0` `cleanup` Either remove `compose.grafana.yml` and `compose.tigm.yml` from the repository, or move them under an `examples/` or `experiments/` directory and mark them explicitly as unsupported optional extensions, not part of the supported ASS-CMO stack.
+- [x] `pre-1.0.0` `cleanup` Review `.env.example` and remove or clearly mark as optional any variables that exist solely for the Grafana / TIM / TIGM overlay, unless they are also required by the core stack.
+  - Resolved by removing all overlay-only variables from `.env.example` and the matching installer prompt/secret generation from `install.sh`.
+- [x] `pre-1.0.0` `cleanup` Either remove `compose.grafana.yml` and `compose.tigm.yml` from the repository, or move them under an `examples/` or `experiments/` directory and mark them explicitly as unsupported optional extensions, not part of the supported ASS-CMO stack.
+  - Resolved by full removal (including `config.example/grafana/`, `config.example/mosquitto/`, `config.example/telegraf/`). Last tag with the overlays: `v0.8.1`.
 - [x] `pre-1.0.0` `docs` Add a brief note in a visible location (e.g. README or CHANGELOG) that these overlays have been moved out of the supported core path.
 
 Note: `CHANGELOG.md` historical entries that mention Grafana / TIM / TIGM are intentionally kept as-is, similar to how historical shared-inventory-token entries are preserved for context.
@@ -605,7 +607,6 @@ Suggested wording:
 - [ ] `docs` Add public release checklist.
 - [ ] `docs` Add known limitations:
   - no inventory history yet
-  - Grafana/TIM stack is currently minimal
   - Linux handlers tested mainly on Arch/KDE
   - Windows handlers tested on limited VM set
 
@@ -684,11 +685,13 @@ Suggested wording:
 
 ### TIM / MQTT / Telegraf overlay
 
-- [ ] `hardening` Mark TIM/MQTT stack as lab-only until hardened.
-- [ ] `hardening` Do not expose anonymous MQTT listener on `0.0.0.0` by default.
-- [ ] `hardening` Add MQTT auth/password-file or bind only to trusted LAN/VPN interface.
-- [ ] `docs` Document that Telegraf Docker socket access is a sensitive monitoring surface.
-- [ ] `hardening` Review whether Docker socket mount is required for default TIM profile.
+Obsolete: the TIM / MQTT / Telegraf / Grafana overlay was removed from the repository (last tag containing it: `v0.8.1`), so these hardening items no longer apply to the maintained tree.
+
+- [x] `hardening` Mark TIM/MQTT stack as lab-only until hardened. (obsolete — overlay removed)
+- [x] `hardening` Do not expose anonymous MQTT listener on `0.0.0.0` by default. (obsolete — overlay removed)
+- [x] `hardening` Add MQTT auth/password-file or bind only to trusted LAN/VPN interface. (obsolete — overlay removed)
+- [x] `docs` Document that Telegraf Docker socket access is a sensitive monitoring surface. (obsolete — overlay removed)
+- [x] `hardening` Review whether Docker socket mount is required for default TIM profile. (obsolete — overlay removed)
 
 ### CSS / project structure long-term cleanup
 
@@ -699,9 +702,11 @@ Suggested wording:
 
 - [ ] `cleanup` Optionally migrate older deployments that still use the legacy PostgreSQL owner/user name `assrmm` to the current `asscmo` naming. This is not an immediate blocker because the dashboard uses the read-only `ass_dashboarder` role and new/example configs use `asscmo`.
 
-### v0.8.2 candidate: DB-backed version expectations
+### v0.9.0 candidate: DB-backed version expectations
 
-- [ ] `0.8.2` Add a small DB-backed versions/expected_versions table for ASS-CMO app, bundled Linux agent, bundled Windows agent, helper/handler versions, and optional observed platform/kernel baselines as needed.
+Planned as part of a v0.9.0 schema milestone: introducing new ASS-CMO-owned table(s), starting with version expectations. Other schema-backed ideas may join this milestone.
+
+- [ ] `0.9.0` Add a small DB-backed versions/expected_versions table for ASS-CMO app, bundled Linux agent, bundled Windows agent, helper/handler versions, and optional observed platform/kernel baselines as needed.
   - Goal: stop hardcoding expected agent versions directly in dashboard SQL views.
   - Use it to simplify Agent versions and future update/status dashboard views.
   - Current `main` already contains a hotfix for `50-agent-versions.sql` after `v0.8.1`; do not retag `v0.8.1`.

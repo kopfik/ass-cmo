@@ -13,24 +13,6 @@ config.local/nginx/*
 config.local/scripts/*
 !config.local/scripts/.gitkeep
 
-# Local Grafana custom/runtime files
-config.local/grafana/*
-!config.local/grafana/.gitkeep
-!config.local/grafana/dashboards/
-!config.local/grafana/provisioning/
-config.local/grafana/dashboards/*
-config.local/grafana/provisioning/*
-!config.local/grafana/dashboards/.gitkeep
-!config.local/grafana/provisioning/.gitkeep
-
-# Local Mosquitto config/secrets
-config.local/mosquitto/*
-!config.local/mosquitto/.gitkeep
-
-# Local Telegraf config
-config.local/telegraf/*
-!config.local/telegraf/.gitkeep
-
 # Backups / dumps
 config.local/backups/*
 !config.local/backups/.gitkeep
@@ -72,12 +54,6 @@ config.local/backups/*
 !database/init/*.sql
 !database/scripts/
 !database/scripts/*.sql
-# Local InfluxDB runtime/config
-config.local/influxdb/*
-!config.local/influxdb/.gitkeep
-!config.local/influxdb/config/
-config.local/influxdb/config/*
-!config.local/influxdb/config/.gitkeep
 
 # Real agent configs / shared inventory token
 agents/linux/agent.conf

@@ -70,7 +70,6 @@ Agent enrollment uses a two-phase flow: the installer initiates a pending reques
 - URI handler target validation needs continued hardening.
 - Inventory payload schema validation needs continued hardening.
 - Adminer exposure must be controlled in production deployments.
-- TIM/MQTT/Telegraf/Grafana components are optional/lab-oriented until hardened. Do not expose MQTT listeners, Grafana/Adminer endpoints, or Telegraf Docker socket monitoring publicly without authentication, access control, and an explicit threat-model review.
 
 ## Deployment exposure model
 
@@ -83,7 +82,7 @@ Recommended deployment models are:
 - public reverse proxy only for narrowly scoped ingest paths, with source IP allowlists for known agents or sites,
 - optional tunneling/VPN from public infrastructure back to an internal reverse proxy.
 
-The server UI, Adminer, Grafana and similar administrative endpoints should be treated as internal-only tools. Do not expose them directly to the internet without an external protection layer such as VPN, IP allowlisting, strong authentication, or disabling the endpoint entirely.
+The server UI, Adminer and similar administrative endpoints should be treated as internal-only tools. Do not expose them directly to the internet without an external protection layer such as VPN, IP allowlisting, strong authentication, or disabling the endpoint entirely.
 
 Mutable dashboard actions, including enrollment approval/denial and agent secret revocation, rely on this operator-controlled admin boundary around the web UI. CSRF tokens protect browser-originated form submissions, but CSRF is not an authentication layer. Do not expose these dashboard routes directly to the internet without VPN, IP allowlisting, reverse-proxy authentication, SSO/basic auth, or equivalent protection.
 

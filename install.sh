@@ -416,14 +416,6 @@ print_install_credentials() {
   value "database: $(get_env POSTGRES_DB "$env_file")"
   value "user: $(get_env POSTGRES_DASHBOARD_USER "$env_file")"
   value "password: $(get_env POSTGRES_DASHBOARD_PASSWORD "$env_file")"
-
-  detail "Grafana admin login"
-  value "user: $(get_env GRAFANA_ADMIN_USER "$env_file")"
-  value "password: $(get_env GRAFANA_ADMIN_PASSWORD "$env_file")"
-
-  detail "InfluxDB initial admin login for TIM/TIGM overlays"
-  value "user: $(get_env INFLUXDB_ADMIN_USER "$env_file")"
-  value "password: $(get_env INFLUXDB_ADMIN_PASSWORD "$env_file")"
 }
 
 prepare_env_file() {
@@ -635,7 +627,6 @@ if [ "$use_existing_env" -eq 0 ]; then
   postgres_db="$(ask_default "Enter PostgreSQL database name" "inventory_db")"
   postgres_user="$(ask_default "Enter PostgreSQL application user" "asscmo")"
   dashboard_user="$(ask_default "Enter dashboard read-only DB user" "ass_dashboarder")"
-  grafana_user="$(ask_default "Enter Grafana admin user" "admin")"
   ssh_user="$(ask_optional "Enter default SSH user for dashboard links" "")"
 
   cp .env.example "$ENV_FILE"
@@ -649,7 +640,6 @@ if [ "$use_existing_env" -eq 0 ]; then
   set_env POSTGRES_DB "$postgres_db" "$ENV_FILE"
   set_env POSTGRES_USER "$postgres_user" "$ENV_FILE"
   set_env POSTGRES_DASHBOARD_USER "$dashboard_user" "$ENV_FILE"
-  set_env GRAFANA_ADMIN_USER "$grafana_user" "$ENV_FILE"
   set_env ASSCMO_DASHBOARD_SSH_USER "$ssh_user" "$ENV_FILE"
 else
   if [ -z "$(get_env ASSCMO_INSTANCE_NAME "$ENV_FILE")" ]; then
@@ -703,14 +693,10 @@ set_env_if_missing_or_weak ASSCMO_ENROLLMENT_PEPPER "$(rand_b64 48)" "$ENV_FILE"
 set_env_if_missing_or_weak ASSCMO_ENROLLMENT_APPROVE_TOKEN "$(rand_b64 48)" "$ENV_FILE"
 set_env_if_missing_or_weak POSTGRES_PASSWORD "$(rand_b64 32)" "$ENV_FILE"
 set_env_if_missing_or_weak POSTGRES_DASHBOARD_PASSWORD "$(rand_b64 32)" "$ENV_FILE"
-set_env_if_missing_or_weak GRAFANA_ADMIN_PASSWORD "$(rand_b64 32)" "$ENV_FILE"
-set_env_if_missing_or_weak INFLUXDB_ADMIN_PASSWORD "$(rand_b64 32)" "$ENV_FILE"
-set_env_if_missing_or_weak INFLUXDB_ADMIN_TOKEN "$(rand_b64 48)" "$ENV_FILE"
-set_env_if_missing_or_weak INFLUX_OPERATOR_TOKEN "$(rand_b64 48)" "$ENV_FILE"
 chmod 600 "$ENV_FILE"
 
 info "Preparing local directories and files"
-mkdir -p config.local/backups config.local/dashboard-views config.local/grafana/dashboards config.local/grafana/provisioning config.local/influxdb/config config.local/mosquitto config.local/nginx config.local/scripts config.local/telegraf config.local/branding/logo config.local/branding/icons
+mkdir -p config.local/backups config.local/dashboard-views config.local/nginx config.local/scripts config.local/branding/logo config.local/branding/icons
 cp -n config.example/branding/logo/* config.local/branding/logo/ 2>/dev/null || true
 
 copy_dir_contents_if_empty config.example/nginx config.local/nginx
@@ -766,4 +752,3 @@ value "Invoke-WebRequest -UseBasicParsing \"https://$(get_env ASSCMO_INSTANCE_NA
 detail "Notes"
 warn "Review config.local/nginx/ before exposing this publicly."
 warn "TLS certificates and DNS are intentionally not automated by this installer."
-warn "Grafana, InfluxDB, Telegraf, Mosquitto and TIM/TIGM overlays are not installed by this core installer."

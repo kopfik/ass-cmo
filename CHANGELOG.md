@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Removed
+- Removed the optional Grafana / TIM / TIGM (Telegraf / InfluxDB / Grafana / Mosquitto) monitoring overlays from the repository: `compose.grafana.yml`, `compose.tigm.yml`, the `config.example/grafana/`, `config.example/mosquitto/` and `config.example/telegraf/` example configs, their `.env.example` variables, installer prompts and generated secrets, and the related `.gitignore` entries. These overlays are not part of the supported ASS-CMO core. For transparency: **the last release tag that still contains the full overlay stack is `v0.8.1`** — branch or check out that tag if you want to keep using them. They remain unsupported. Existing deployments are not touched by this change; operators can manually remove leftover `GRAFANA_*` / `INFLUX*` / `TELEGRAF_*` / `MQTT_PORT` variables from `config.local/.env` and the unused `config.local/grafana|influxdb|mosquitto|telegraf` directories.
+
 ## v0.8.1
 - Reworked dashboard CSS into a token-driven theme structure and polished filter/search control colors across bundled themes.
 

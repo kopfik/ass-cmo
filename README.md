@@ -101,9 +101,9 @@ v1.0.0  later stable release
 
 ## Optional / experimental overlays
 
-ASS-CMO previously included experimental Grafana and TIGM-style monitoring/visualization overlays. These are **no longer part of the supported ASS-CMO core direction** and are not documented here.
+ASS-CMO previously included experimental Grafana and TIGM-style (Telegraf / InfluxDB / Grafana / Mosquitto) monitoring/visualization overlays. These are **not part of the supported ASS-CMO core** and have been removed from the repository. The last release tag that still contains the overlay compose files and example configs is `v0.8.1` — branch or check out that tag if you want them. They remain unsupported.
 
-Before v1.0.0 they will be removed from the supported core path. The final form is not yet decided — they will either be removed from the repository or moved into an `examples/` / `experiments/` area as unsupported optional extensions. The supported core remains inventory collection and storage, enrollment with per-host agent secrets, the admin overview dashboard, and the local connection launchers.
+The supported core remains inventory collection and storage, enrollment with per-host agent secrets, the admin overview dashboard, and the local connection launchers.
 
 ## Access control and agent updates
 
