@@ -589,8 +589,12 @@ Suggested wording:
 - [ ] `hardening` Review `set -e` / `set -u` edge cases.
 - [x] `hardening` Review curl/PowerShell download error handling, retry behavior, timeouts and empty artifact checks.
 - [ ] `hardening` Run PSScriptAnalyzer-style audit on Windows agent scripts.
-- [ ] `cleanup` Replace localized `net localgroup` parsing with a more robust Windows API / PowerShell / CIM method.
+- [ ] `cleanup` Replace localized `net localgroup` parsing with a more robust Windows API / PowerShell / CIM method (e.g. `Get-LocalGroupMember`). Current filters only cover English and Czech headers/trailers, so other locales (German, French, ...) can pollute the reported admin list. (Re-confirmed by the July 2026 multi-AI review round.)
 - [ ] `hardening` Validate and normalize collected admin access data.
+
+### Installer
+
+- [ ] `cleanup` Remove the dead first `while` loop in `cert_covers_host()` in `install.sh`: its `exit 0` runs in a pipeline subshell whose status is never read, and the grep checks below it do the actual work (the in-code comment already admits this). Harmless, cosmetic only. (July 2026 multi-AI review finding.)
 
 ---
 

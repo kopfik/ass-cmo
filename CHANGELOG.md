@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- Installer `sed` template substitutions in `replace_nginx_placeholders` and `sync_dashboard_view_templates` now escape replacement values (`\`, `/`, `&`, `|`) through the same helper as `.env` writes, so an instance hostname, Adminer hostname, TLS certificate name, base URL, SSH user, or agent version containing a sed-special character can no longer corrupt the generated nginx configuration or dashboard views.
+- The installer's keep-existing-env path now also treats the `.env.example` placeholder values of `ASSCMO_ADMINER_URL` (`https://adminer.example.com/`) and `ASSCMO_TLS_CERT_NAME` (`example.com`) as unset and asks for them, matching the existing instance-hostname behavior. Previously only empty values were filled in, so an env manually copied from `.env.example` kept the example Adminer URL and certificate name.
+- The URI-handler reinstall command in `TROUBLESHOOTING.md` now includes the required `ASSCMO_HANDLER_BASE_URL=...` variable, matching `INSTALL.md`, the installer output, and the command the dashboard generates.
+
 ## v0.8.2
 
 ### Security

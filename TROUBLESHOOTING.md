@@ -180,7 +180,7 @@ If dashboard `assssh://`, `assrdp://`, or `assweb://` links do nothing when clic
 - The handler installer protects existing local handler customizations by default. If you have older or customized handlers, reinstall with the overwrite flag:
 
 ```bash
-ASSCMO_OVERWRITE_HANDLERS=1 sh install-ass-cmo-uri-handlers.sh
+ASSCMO_OVERWRITE_HANDLERS=1 ASSCMO_HANDLER_BASE_URL=https://ass-cmo.example.com sh install-ass-cmo-uri-handlers.sh
 ```
 
 On Windows, set the same variable before running the handler installer:

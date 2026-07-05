@@ -135,12 +135,16 @@ rand_b64() {
   openssl rand -base64 "$1"
 }
 
+sed_escape_replacement() {
+  printf '%s' "$1" | sed 's/[\/&|]/\\&/g'
+}
+
 set_env() {
   key="$1"
   value="$2"
   file="$3"
 
-  escaped="$(printf '%s' "$value" | sed 's/[\/&|]/\\&/g')"
+  escaped="$(sed_escape_replacement "$value")"
 
   if grep -q "^${key}=" "$file"; then
     sed -i "s|^${key}=.*|${key}=${escaped}|" "$file"
@@ -489,9 +493,9 @@ copy_file_if_missing() {
 }
 
 replace_nginx_placeholders() {
-  ass_host="$1"
-  adminer_host="$2"
-  cert_name="$3"
+  ass_host="$(sed_escape_replacement "$1")"
+  adminer_host="$(sed_escape_replacement "$2")"
+  cert_name="$(sed_escape_replacement "$3")"
 
   [ -d config.local/nginx ] || return 0
 
@@ -518,6 +522,10 @@ sync_dashboard_view_templates() {
   if [ -z "$ssh_user" ]; then
     ssh_user="$(id -un 2>/dev/null || printf root)"
   fi
+
+  base_url="$(sed_escape_replacement "$base_url")"
+  ssh_user="$(sed_escape_replacement "$ssh_user")"
+  linux_version="$(sed_escape_replacement "$linux_version")"
 
   find config.local/dashboard-views -type f -name '*.sql' -print | while IFS= read -r file; do
     sed -i \
@@ -674,12 +682,12 @@ else
     set_env ASSCMO_BASE_URL "https://${instance_name}" "$ENV_FILE"
   fi
 
-  if [ -z "$(get_env ASSCMO_ADMINER_URL "$ENV_FILE")" ]; then
+  if [ -z "$(get_env ASSCMO_ADMINER_URL "$ENV_FILE")" ] || [ "$(get_env ASSCMO_ADMINER_URL "$ENV_FILE")" = "https://adminer.example.com/" ]; then
     adminer_url="$(ask_default "Enter Adminer public URL" "$(default_adminer_url "$instance_name")")"
     set_env ASSCMO_ADMINER_URL "$adminer_url" "$ENV_FILE"
   fi
 
-  if [ -z "$(get_env ASSCMO_TLS_CERT_NAME "$ENV_FILE")" ]; then
+  if [ -z "$(get_env ASSCMO_TLS_CERT_NAME "$ENV_FILE")" ] || [ "$(get_env ASSCMO_TLS_CERT_NAME "$ENV_FILE")" = "example.com" ]; then
     tls_cert_name="$(choose_letsencrypt_cert)"
     if [ -z "$tls_cert_name" ]; then
       tls_cert_name="$(ask_default "Enter Let's Encrypt certificate name" "$(default_tls_cert_name "$instance_name")")"
