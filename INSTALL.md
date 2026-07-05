@@ -113,7 +113,7 @@ The installer sets up only the core stack. Experimental optional overlays are no
 Check that the core containers are running:
 
 ```bash
-docker compose ps
+sudo docker compose ps
 ```
 
 Expected running containers:
@@ -165,7 +165,7 @@ The root `.env` is a symlink to `config.local/.env` for Docker Compose compatibi
 After changing values that the PHP container reads (for example a default SSH user), recreate the container:
 
 ```bash
-docker compose up -d --force-recreate php
+sudo docker compose up -d --force-recreate php
 ```
 
 ---
@@ -283,7 +283,7 @@ To update the server, pull the latest code and recreate the core stack:
 
 ```bash
 git pull
-docker compose up -d postgres adminer php nginx
+sudo docker compose up -d
 ```
 
 Linux agents are re-run automatically after package transactions through the apt or pacman hook. The apt hook is non-blocking and does not break package upgrades if the ASS-CMO server is unavailable. To update an agent's files explicitly, re-run the agent installer one-liner on the managed host.

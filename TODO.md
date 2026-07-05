@@ -541,6 +541,10 @@ Suggested wording:
 - [x] `hardening` Verify PostgreSQL permissions for dashboard user.
 - [ ] `cleanup` Consider renaming/commenting SQL safety helper to avoid false sense of security.
 
+### Legacy shared token
+
+- [ ] `cleanup` Remove the legacy shared inventory token compatibility path entirely: `ASSCMO_INVENTORY_TOKEN` and `ASSCMO_LEGACY_SHARED_INVENTORY_TOKEN_ENABLED` passthrough in `compose.yml`, `ingest_authenticate_legacy_shared_token()` and related branches in `app/public/inventory.php`, and the unused `ASSCMO_INVENTORY_TOKEN` variable in `agents/linux/install-ass-cmo-agent.sh`. Both private instances are migrated to per-host secrets and every public release shipped per-host tokens only, so the migration path has no remaining users. Deliberately deferred to after the v0.8.2 tag (flagged in the July 2026 external review round).
+
 ### Local topology/config
 
 - [ ] `cleanup` Move hardcoded network segments from source code into `config.local/` configuration.

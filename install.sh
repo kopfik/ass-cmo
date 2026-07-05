@@ -748,7 +748,7 @@ fi
 info "ASS-CMO core installer finished"
 
 detail "Core services"
-value "docker compose --env-file config.local/.env ps"
+value "sudo docker compose ps"
 
 detail "Important local files"
 value "config.local/.env"

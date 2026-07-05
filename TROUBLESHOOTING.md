@@ -26,7 +26,7 @@ All commands below are read-only checks or safe repair steps. Replace `asscmo`, 
 Show container status:
 
 ```bash
-docker compose ps
+sudo docker compose ps
 ```
 
 Expected running containers:
@@ -41,13 +41,13 @@ ass-nginx
 If a container is missing, restarting, or crashing, inspect the logs:
 
 ```bash
-docker compose logs
+sudo docker compose logs
 ```
 
 To follow logs for a single service:
 
 ```bash
-docker compose logs -f nginx
+sudo docker compose logs -f nginx
 ```
 
 ---
@@ -198,10 +198,10 @@ $env:ASSCMO_OVERWRITE_HANDLERS = "1"
 ## Where to look for logs
 
 ```text
-docker compose logs           full stack
-docker compose logs nginx      reverse proxy / TLS
-docker compose logs php        dashboard and ingest endpoint
-docker compose logs postgres   database
+sudo docker compose logs           full stack
+sudo docker compose logs nginx      reverse proxy / TLS
+sudo docker compose logs php        dashboard and ingest endpoint
+sudo docker compose logs postgres   database
 journalctl -u ass-cmo-agent.service                         Linux agent (on the managed host)
 ```
 
@@ -245,8 +245,8 @@ jq . config.local/sites.json >/dev/null && echo OK
 Create the Docker network and start the core stack manually:
 
 ```bash
-docker network create ass-net 2>/dev/null || true
-docker compose up -d postgres adminer php nginx
+sudo docker network create ass-net 2>/dev/null || true
+sudo docker compose up -d
 ```
 
 To apply the schema and recreate the dashboard role manually, use the commands in [Database checks](#database-checks) and [Dashboard access checks](#dashboard-access-checks).
