@@ -601,7 +601,8 @@ Suggested wording:
 
 ## Documentation
 
-- [ ] `docs` Recapture install screenshots (`docs/images/install/{dark,light}/01..03`) from a current core-only installer run: they still show Grafana/InfluxDB prompts and credentials from before the overlay removal. Opportunistically refresh dashboard screenshots (old "Agent auth" sidebar naming). Do this before the next release tag.
+- [x] `docs` Recapture install screenshots (`docs/images/install/{dark,light}/01..03`) from a current core-only installer run: they still show Grafana/InfluxDB prompts and credentials from before the overlay removal.
+- [ ] `docs` Refresh dashboard screenshots (old "Agent auth" sidebar naming).
 - [x] `docs` Add `SECURITY.md`.
 - [ ] `docs` Add deployment hardening checklist.
 - [ ] `docs` Add handler threat model.

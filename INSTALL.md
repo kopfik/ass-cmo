@@ -71,8 +71,6 @@ On a reinstall, the installer keeps existing values and only fills in missing or
   <img alt="Installer running: hostname, database, TLS certificate, and SSH user prompts followed by secret generation and DH parameter preparation" src="docs/images/install/dark/01-installer-prompts.png">
 </picture>
 
-The numbered markers in the screenshots highlight terminal prompts where the operator provides input. They are not the same as the numbered installer behavior list below.
-
 ---
 
 ## What the installer asks for
