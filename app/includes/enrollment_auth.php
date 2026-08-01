@@ -432,29 +432,48 @@ function asscmo_deny_enrollment_request(PDO $pdo, int $requestId, ?string $denie
     }
 }
 
-function asscmo_revoke_agent_auth(PDO $pdo, string $uid, ?string $actor = null, ?string $reason = null): void {
+function asscmo_revoke_agent_auth(
+    PDO $pdo,
+    string $uid,
+    ?string $actor = null,
+    ?string $reason = null,
+    bool $alsoDeleteInventory = false
+): void {
     if ($uid === '') {
         throw new InvalidArgumentException('UID must not be empty.');
     }
 
-    $stmt = $pdo->prepare("
-        UPDATE agent_auth
-           SET status = 'revoked',
-               updated_at = CURRENT_TIMESTAMP,
-               revoked_at = CURRENT_TIMESTAMP,
-               revoked_by = :actor,
-               revoked_reason = :reason
-         WHERE uid = :uid
-           AND status IN ('active', 'disabled')
-           AND revoked_at IS NULL
-    ");
-    $stmt->execute([
-        ':uid' => $uid,
-        ':actor' => $actor,
-        ':reason' => $reason,
-    ]);
+    $pdo->beginTransaction();
+    try {
+        $stmt = $pdo->prepare("
+            UPDATE agent_auth
+               SET status = 'revoked',
+                   updated_at = CURRENT_TIMESTAMP,
+                   revoked_at = CURRENT_TIMESTAMP,
+                   revoked_by = :actor,
+                   revoked_reason = :reason
+             WHERE uid = :uid
+               AND status IN ('active', 'disabled')
+               AND revoked_at IS NULL
+        ");
+        $stmt->execute([
+            ':uid' => $uid,
+            ':actor' => $actor,
+            ':reason' => $reason,
+        ]);
 
-    if ($stmt->rowCount() !== 1) {
-        throw new AsscmoAgentAuthNotFoundException('Not found');
+        if ($stmt->rowCount() !== 1) {
+            throw new AsscmoAgentAuthNotFoundException('Not found');
+        }
+
+        if ($alsoDeleteInventory) {
+            $deleteStmt = $pdo->prepare("DELETE FROM inventory WHERE uid = :uid");
+            $deleteStmt->execute([':uid' => $uid]);
+        }
+
+        $pdo->commit();
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        throw $e;
     }
 }

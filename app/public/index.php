@@ -189,13 +189,17 @@ function render_agent_auth_main(array $rows, string $error, ?array $flash, strin
 
                     <?php if ((string)$row['status'] !== 'revoked' && ($row['revoked_at'] ?? null) === null): ?>
                         <div class="enrollment-actions">
-                            <form method="post" action="/?view=agent-auth" class="enrollment-form" onsubmit="return window.confirm(<?= h(json_encode($confirmText, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)) ?>);">
+                            <form method="post" action="/?view=agent-auth" class="enrollment-form" onsubmit="return window.confirm(<?= h(json_encode($confirmText, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)) ?> + (this.also_delete_inventory.checked ? ' This also permanently deletes the inventory record (hostname, IPs, last reported data).' : ''));">
                                 <input type="hidden" name="csrf_token" value="<?= h($csrfToken) ?>">
                                 <input type="hidden" name="agent_auth_action" value="revoke">
                                 <input type="hidden" name="uid" value="<?= h($uid) ?>">
                                 <label class="enrollment-confirm-label">
                                     <input type="checkbox" name="confirm_revoke" value="1" required>
                                     I confirm I want to revoke this per-host secret. Recovery is fresh re-enrollment.
+                                </label>
+                                <label class="enrollment-confirm-label">
+                                    <input type="checkbox" name="also_delete_inventory" value="1" checked>
+                                    Also delete the inventory record for this host.
                                 </label>
                                 <button type="submit" class="enrollment-btn enrollment-btn-deny">Revoke</button>
                             </form>
@@ -349,14 +353,18 @@ if ($isEnrollment || $isAgentAuth) {
         } elseif (empty($_POST['confirm_revoke'])) {
             $agentAuthError = 'You must confirm the revoke action.';
         } else {
+            $alsoDeleteInventory = !empty($_POST['also_delete_inventory']);
             try {
                 asscmo_revoke_agent_auth(
                     enrollment_admin_pdo(),
                     $postedUid,
                     dashboard_admin_actor(),
-                    'Revoked from dashboard agent auth view.'
+                    'Revoked from dashboard agent auth view.',
+                    $alsoDeleteInventory
                 );
-                $_SESSION['enrollment_flash'] = ['type' => 'success', 'message' => "UID {$postedUid} revoked."];
+                $flashMessage = "UID {$postedUid} revoked."
+                    . ($alsoDeleteInventory ? ' Inventory record deleted.' : '');
+                $_SESSION['enrollment_flash'] = ['type' => 'success', 'message' => $flashMessage];
                 header('Location: /?view=agent-auth');
                 exit;
             } catch (AsscmoAgentAuthNotFoundException $e) {
