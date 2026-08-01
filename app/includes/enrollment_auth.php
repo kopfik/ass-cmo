@@ -477,3 +477,25 @@ function asscmo_revoke_agent_auth(
         throw $e;
     }
 }
+
+function asscmo_delete_inventory_record_for_revoked_uid(PDO $pdo, string $uid): void {
+    if ($uid === '') {
+        throw new InvalidArgumentException('UID must not be empty.');
+    }
+
+    $stmt = $pdo->prepare("
+        DELETE FROM inventory
+         WHERE uid = :uid
+           AND EXISTS (
+               SELECT 1 FROM agent_auth
+                WHERE agent_auth.uid = inventory.uid
+                  AND agent_auth.status = 'revoked'
+                  AND agent_auth.revoked_at IS NOT NULL
+           )
+    ");
+    $stmt->execute([':uid' => $uid]);
+
+    if ($stmt->rowCount() !== 1) {
+        throw new AsscmoAgentAuthNotFoundException('Not found');
+    }
+}

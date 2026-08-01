@@ -128,6 +128,90 @@ function render_enrollment_main(array $rows, string $error, ?array $flash, strin
     <?php
 }
 
+function render_agent_auth_card_meta(array $row, string $uid, string $hostname, string $location, string $ipv4): void {
+    ?>
+    <div class="meta-box meta-box-compact enrollment-meta">
+        <div class="meta-row"><span>Hostname</span><strong><?= $hostname !== '' ? h($hostname) : '—' ?></strong></div>
+        <?php if (($row['fqdn'] ?? null) !== null && (string)$row['fqdn'] !== ''): ?>
+            <div class="meta-row"><span>FQDN</span><strong><?= h((string)$row['fqdn']) ?></strong></div>
+        <?php endif; ?>
+        <div class="meta-row"><span>Location</span><strong><?= $location !== '' ? h($location) : '—' ?></strong></div>
+        <div class="meta-row"><span>Primary IPv4</span><strong><?= $ipv4 !== '' ? h($ipv4) : '—' ?></strong></div>
+        <div class="meta-row"><span>UID</span><strong><?= h($uid) ?></strong></div>
+        <div class="meta-row"><span>Agent auth status</span><strong><?= h((string)$row['status']) ?></strong></div>
+        <div class="meta-row"><span>Last auth</span><strong><?= ($row['last_auth_at'] ?? null) !== null ? h((string)$row['last_auth_at']) : '—' ?></strong></div>
+        <div class="meta-row"><span>Last inventory</span><strong><?= ($row['last_inventory_at'] ?? null) !== null ? h((string)$row['last_inventory_at']) : (($row['inventory_update_time'] ?? null) !== null ? h((string)$row['inventory_update_time']) : '—') ?></strong></div>
+        <div class="meta-row"><span>Created</span><strong><?= ($row['created_at'] ?? null) !== null ? h((string)$row['created_at']) : '—' ?></strong></div>
+        <div class="meta-row"><span>Revoked at</span><strong><?= ($row['revoked_at'] ?? null) !== null ? h((string)$row['revoked_at']) : '—' ?></strong></div>
+    </div>
+    <?php
+}
+
+function render_delete_inventory_form(string $uid, string $csrfToken, string $viewId, string $confirmText): void {
+    ?>
+    <form method="post" action="/?view=<?= h($viewId) ?>" class="enrollment-form" onsubmit="return window.confirm(<?= h(json_encode($confirmText, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)) ?>);">
+        <input type="hidden" name="csrf_token" value="<?= h($csrfToken) ?>">
+        <input type="hidden" name="agent_auth_action" value="delete_inventory">
+        <input type="hidden" name="uid" value="<?= h($uid) ?>">
+        <label class="enrollment-confirm-label">
+            <input type="checkbox" name="confirm_delete_inventory" value="1" required>
+            I confirm I want to delete this host's inventory record.
+        </label>
+        <button type="submit" class="enrollment-btn enrollment-btn-deny">Delete from inventory</button>
+    </form>
+    <?php
+}
+
+function render_revoked_agents_main(array $rows, string $error, ?array $flash, string $csrfToken): void {
+    ?>
+    <?php if ($flash !== null): ?>
+        <div class="enrollment-flash enrollment-flash-<?= h($flash['type']) ?>"><?= h($flash['message']) ?></div>
+    <?php endif; ?>
+    <?php if ($error !== ''): ?>
+        <div class="error"><?= h($error) ?></div>
+    <?php endif; ?>
+    <div class="table-tools filter">
+        <label class="filter-label" for="agent-auth-filter">Filter</label>
+        <input id="agent-auth-filter" class="filter-input" type="search"
+               placeholder="Type to filter, or: all &middot; date" autocomplete="off">
+        <span id="agent-auth-count" class="row-count"></span>
+    </div>
+    <div class="enrollment-list" id="agent-auth-list" data-min-chars="0">
+        <?php if ($rows === []): ?>
+            <div class="empty">No revoked hosts with a remaining inventory record.</div>
+        <?php else: ?>
+            <?php foreach ($rows as $row): ?>
+                <?php
+                $uid = (string)$row['uid'];
+                $hostname = (string)($row['hostname'] ?? '');
+                $location = (string)($row['location'] ?? '');
+                $ipv4 = (string)($row['primary_ipv4_addr'] ?? '');
+                $authLabel   = $hostname !== '' ? $hostname : $uid;
+                $authCreated = isset($row['created_at']) ? (string)$row['created_at'] : '';
+                $confirmDeleteText = "Delete the inventory record for {$authLabel}? This only removes the stored inventory snapshot; the revoked credential and its audit history are kept.";
+                ?>
+                <div class="enrollment-card"
+                     data-agent-auth-card
+                     data-auth-label="<?= h($authLabel) ?>"
+                     data-auth-created="<?= h($authCreated) ?>"
+                >
+                    <div class="enrollment-card-header">
+                        <span class="enrollment-card-id"><?= h($authLabel) ?></span>
+                        <span class="enrollment-badge enrollment-badge-expired"><?= h((string)$row['status']) ?></span>
+                    </div>
+
+                    <?php render_agent_auth_card_meta($row, $uid, $hostname, $location, $ipv4); ?>
+
+                    <div class="enrollment-actions">
+                        <?php render_delete_inventory_form($uid, $csrfToken, 'revoked-agents', $confirmDeleteText); ?>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        <?php endif; ?>
+    </div>
+    <?php
+}
+
 function render_agent_auth_main(array $rows, string $error, ?array $flash, string $csrfToken): void {
     ?>
     <?php if ($flash !== null): ?>
@@ -204,6 +288,15 @@ function render_agent_auth_main(array $rows, string $error, ?array $flash, strin
                                 <button type="submit" class="enrollment-btn enrollment-btn-deny">Revoke</button>
                             </form>
                         </div>
+                    <?php elseif ($hostname !== ''): ?>
+                        <div class="enrollment-actions">
+                            <?php render_delete_inventory_form(
+                                $uid,
+                                $csrfToken,
+                                'agent-auth',
+                                "Delete the inventory record for {$authLabel}? This only removes the stored inventory snapshot; the revoked credential and its audit history are kept."
+                            ); ?>
+                        </div>
                     <?php endif; ?>
                 </div>
         <?php endforeach; ?>
@@ -232,11 +325,19 @@ $views['agent-auth'] = [
     'path'        => 'synthetic:agent-auth',
     'sql'         => '',
 ];
+$views['revoked-agents'] = [
+    'id'          => 'revoked-agents',
+    'label'       => 'Revoked agents',
+    'description' => 'Revoked per-host secrets that still have a stored inventory record; clean up leftover host data here.',
+    'path'        => 'synthetic:revoked-agents',
+    'sql'         => '',
+];
 
 $selectedId  = selected_view_id($views, $_GET['view'] ?? null);
 $currentView = $selectedId !== null ? $views[$selectedId] : null;
 $isEnrollment = $selectedId === 'enrollment';
 $isAgentAuth = $selectedId === 'agent-auth';
+$isRevokedAgents = $selectedId === 'revoked-agents';
 
 // ── Data loading ─────────────────────────────────────────────────────────────
 
@@ -245,13 +346,14 @@ $error = '';
 
 $enrollmentRows     = [];
 $agentAuthRows      = [];
+$revokedAgentsRows  = [];
 $enrollmentError    = '';
 $agentAuthError     = '';
 $csrfToken          = '';
 $flashMessage       = null;
 $highlightRequestId = isset($_GET['request_id']) ? (int)$_GET['request_id'] : null;
 
-if ($isEnrollment || $isAgentAuth) {
+if ($isEnrollment || $isAgentAuth || $isRevokedAgents) {
     if (session_status() === PHP_SESSION_NONE) {
         $isHttps = (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off')
             || (isset($_SERVER['SERVER_PORT']) && (string)$_SERVER['SERVER_PORT'] === '443');
@@ -339,40 +441,58 @@ if ($isEnrollment || $isAgentAuth) {
         }
     }
 
-    if ($isAgentAuth && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (($isAgentAuth || $isRevokedAgents) && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $postedCsrf = (string)($_POST['csrf_token'] ?? '');
         $postedAction = (string)($_POST['agent_auth_action'] ?? '');
         $postedUid = trim((string)($_POST['uid'] ?? ''));
 
         if (!hash_equals($csrfToken, $postedCsrf)) {
             $agentAuthError = 'Invalid CSRF token.';
-        } elseif ($postedAction !== 'revoke') {
-            $agentAuthError = 'Unknown action.';
         } elseif ($postedUid === '' || !preg_match('/^[A-Za-z0-9._:@-]{1,64}$/', $postedUid)) {
             $agentAuthError = 'Invalid UID.';
-        } elseif (empty($_POST['confirm_revoke'])) {
-            $agentAuthError = 'You must confirm the revoke action.';
-        } else {
-            $alsoDeleteInventory = !empty($_POST['also_delete_inventory']);
-            try {
-                asscmo_revoke_agent_auth(
-                    enrollment_admin_pdo(),
-                    $postedUid,
-                    dashboard_admin_actor(),
-                    'Revoked from dashboard agent auth view.',
-                    $alsoDeleteInventory
-                );
-                $flashMessage = "UID {$postedUid} revoked."
-                    . ($alsoDeleteInventory ? ' Inventory record deleted.' : '');
-                $_SESSION['enrollment_flash'] = ['type' => 'success', 'message' => $flashMessage];
-                header('Location: /?view=agent-auth');
-                exit;
-            } catch (AsscmoAgentAuthNotFoundException $e) {
-                $agentAuthError = 'Agent auth row not found or already revoked.';
-            } catch (Throwable $e) {
-                error_log('ASS-CMO agent auth revoke UI: ' . $e->getMessage());
-                $agentAuthError = 'Revoke failed. Check server logs.';
+        } elseif ($postedAction === 'revoke') {
+            if (empty($_POST['confirm_revoke'])) {
+                $agentAuthError = 'You must confirm the revoke action.';
+            } else {
+                $alsoDeleteInventory = !empty($_POST['also_delete_inventory']);
+                try {
+                    asscmo_revoke_agent_auth(
+                        enrollment_admin_pdo(),
+                        $postedUid,
+                        dashboard_admin_actor(),
+                        'Revoked from dashboard agent auth view.',
+                        $alsoDeleteInventory
+                    );
+                    $flashMessage = "UID {$postedUid} revoked."
+                        . ($alsoDeleteInventory ? ' Inventory record deleted.' : '');
+                    $_SESSION['enrollment_flash'] = ['type' => 'success', 'message' => $flashMessage];
+                    header('Location: /?view=' . rawurlencode((string)$selectedId));
+                    exit;
+                } catch (AsscmoAgentAuthNotFoundException $e) {
+                    $agentAuthError = 'Agent auth row not found or already revoked.';
+                } catch (Throwable $e) {
+                    error_log('ASS-CMO agent auth revoke UI: ' . $e->getMessage());
+                    $agentAuthError = 'Revoke failed. Check server logs.';
+                }
             }
+        } elseif ($postedAction === 'delete_inventory') {
+            if (empty($_POST['confirm_delete_inventory'])) {
+                $agentAuthError = 'You must confirm the inventory delete action.';
+            } else {
+                try {
+                    asscmo_delete_inventory_record_for_revoked_uid(enrollment_admin_pdo(), $postedUid);
+                    $_SESSION['enrollment_flash'] = ['type' => 'success', 'message' => "Inventory record for UID {$postedUid} deleted."];
+                    header('Location: /?view=' . rawurlencode((string)$selectedId));
+                    exit;
+                } catch (AsscmoAgentAuthNotFoundException $e) {
+                    $agentAuthError = 'Inventory record not found, or this UID is not a revoked agent.';
+                } catch (Throwable $e) {
+                    error_log('ASS-CMO agent auth delete-inventory UI: ' . $e->getMessage());
+                    $agentAuthError = 'Delete failed. Check server logs.';
+                }
+            }
+        } else {
+            $agentAuthError = 'Unknown action.';
         }
     }
 
@@ -418,6 +538,24 @@ if ($isEnrollment || $isAgentAuth) {
                 $agentAuthError = 'Failed to load agent auth rows. Check server logs.';
             }
         }
+    } elseif ($isRevokedAgents) {
+        try {
+            $revokedAgentsStmt = enrollment_admin_pdo()->query("
+                SELECT i.hostname, i.fqdn, i.location, i.primary_ipv4_addr,
+                       a.uid, a.status, a.last_auth_at, a.last_inventory_at, i.inventory_update_time,
+                       a.created_at, a.revoked_at
+                  FROM agent_auth a
+                  JOIN inventory i ON i.uid = a.uid
+                 WHERE a.revoked_at IS NOT NULL
+                 ORDER BY a.revoked_at DESC
+            ");
+            $revokedAgentsRows = $revokedAgentsStmt ? $revokedAgentsStmt->fetchAll() : [];
+        } catch (Throwable $e) {
+            error_log('ASS-CMO revoked agents load UI: ' . $e->getMessage());
+            if ($agentAuthError === '') {
+                $agentAuthError = 'Failed to load revoked agent rows. Check server logs.';
+            }
+        }
     }
 } elseif ($currentView === null) {
     $error = 'No dashboard SQL views found in ' . $ctx['views_dir'];
@@ -451,7 +589,7 @@ if ($isEnrollment || $isAgentAuth) {
 }
 
 $hiddenColumns     = ['notes', 'tags'];
-$columns           = ($isEnrollment || $isAgentAuth) ? [] : visible_table_columns($rows, $hiddenColumns);
+$columns           = ($isEnrollment || $isAgentAuth || $isRevokedAgents) ? [] : visible_table_columns($rows, $hiddenColumns);
 $copyCommandGroups = build_copy_command_groups($ctx);
 
 $topMetaRenderer = $isEnrollment
@@ -468,13 +606,20 @@ $topMetaRenderer = $isEnrollment
             <div class="meta-row"><span>Rendered</span><strong><?= h(date('Y-m-d H:i:s')) ?></strong></div>
         </div>
     <?php }
-    : function () use ($rows, $currentView): void { ?>
+        : ($isRevokedAgents
+            ? function () use ($revokedAgentsRows): void { ?>
+        <div class="meta-box meta-box-compact">
+            <div class="meta-row"><span>Rows</span><strong><?= h(count($revokedAgentsRows)) ?></strong></div>
+            <div class="meta-row"><span>Rendered</span><strong><?= h(date('Y-m-d H:i:s')) ?></strong></div>
+        </div>
+    <?php }
+            : function () use ($rows, $currentView): void { ?>
         <div class="meta-box meta-box-compact">
             <div class="meta-row"><span>Rows</span><strong><?= h(count($rows)) ?></strong></div>
             <div class="meta-row"><span>Source</span><strong><?= h($currentView ? basename((string)$currentView['path']) : '-') ?></strong></div>
             <div class="meta-row"><span>Rendered</span><strong><?= h(date('Y-m-d H:i:s')) ?></strong></div>
         </div>
-    <?php });
+    <?php }));
 
 // ── Render ───────────────────────────────────────────────────────────────────
 
@@ -496,6 +641,8 @@ render_head('ASS-CMO Dashboard', $ctx);
             <?php render_enrollment_main($enrollmentRows, $enrollmentError, $flashMessage, $csrfToken, $highlightRequestId); ?>
         <?php elseif ($isAgentAuth): ?>
             <?php render_agent_auth_main($agentAuthRows, $agentAuthError, $flashMessage, $csrfToken); ?>
+        <?php elseif ($isRevokedAgents): ?>
+            <?php render_revoked_agents_main($revokedAgentsRows, $agentAuthError, $flashMessage, $csrfToken); ?>
         <?php elseif ($error !== ''): ?>
             <div class="error"><?= h($error) ?></div>
         <?php elseif ($rows === []): ?>

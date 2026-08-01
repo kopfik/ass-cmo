@@ -227,6 +227,7 @@
         if (!agentAuthList) return;
         const cards = Array.from(agentAuthList.querySelectorAll('[data-agent-auth-card]'));
         const cmd = filterCmd(agentAuthFilter ? agentAuthFilter.value : '');
+        const minChars = Number(agentAuthList.dataset.minChars || 3);
 
         if (cmd === 'all') {
             cards.sort((a, b) =>
@@ -244,7 +245,7 @@
             });
             cards.forEach(c => agentAuthList.appendChild(c));
             cards.forEach(c => setAgentAuthCardVisible(c, true));
-        } else if (cmd.length >= 3) {
+        } else if (cmd.length >= minChars) {
             for (const card of cards) {
                 const text = (card.textContent || '').toLowerCase();
                 setAgentAuthCardVisible(card, text.includes(cmd));
