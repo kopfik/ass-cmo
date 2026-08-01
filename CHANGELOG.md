@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Added
+- The Revoke agents view now offers an "Also delete the inventory record for this host" checkbox (checked by default) when revoking a per-host secret. Revoke always still marks `agent_auth` as `revoked` and keeps the full audit trail (`revoked_at`, `revoked_by`, `revoked_reason`); the checkbox additionally deletes the corresponding `inventory` row in the same transaction, so the host also disappears from the main dashboard instead of lingering there with a permanently rejected credential. Unchecking it keeps the previous revoke-only behavior, leaving the inventory row in place.
+
 ### Fixed
 - Installer `sed` template substitutions in `replace_nginx_placeholders` and `sync_dashboard_view_templates` now escape replacement values (`\`, `/`, `&`, `|`) through the same helper as `.env` writes, so an instance hostname, Adminer hostname, TLS certificate name, base URL, SSH user, or agent version containing a sed-special character can no longer corrupt the generated nginx configuration or dashboard views.
 - The installer's keep-existing-env path now also treats the `.env.example` placeholder values of `ASSCMO_ADMINER_URL` (`https://adminer.example.com/`) and `ASSCMO_TLS_CERT_NAME` (`example.com`) as unset and asks for them, matching the existing instance-hostname behavior. Previously only empty values were filled in, so an env manually copied from `.env.example` kept the example Adminer URL and certificate name.
