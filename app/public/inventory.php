@@ -81,7 +81,7 @@ function ingest_mark_agent_inventory_seen(PDO $pdo, string $uid): void {
  * The stored state column keeps the last observed Docker state and is never
  * overwritten with a synthetic value.
  */
-function ingest_sync_docker_containers(PDO $pdo, string $uid, array $containers): void {
+function ingest_sync_docker_containers(PDO $pdo, string $uid, array $containers, int $purgeMissingAfterDays): void {
     $markMissing = $pdo->prepare("
         UPDATE docker_containers
            SET present = false,
@@ -90,6 +90,18 @@ function ingest_sync_docker_containers(PDO $pdo, string $uid, array $containers)
            AND present = true
     ");
     $markMissing->execute([':uid' => $uid]);
+
+    // Recreating a compose stack leaves one missing row per container behind, so
+    // long-gone rows are dropped to keep the cleanup view readable. The stack has
+    // no scheduler, so the purge rides along with the scan that already touches
+    // this host's rows.
+    $purgeMissing = $pdo->prepare("
+        DELETE FROM docker_containers
+         WHERE uid = :uid
+           AND present = false
+           AND missing_since < CURRENT_TIMESTAMP - make_interval(days => :days)
+    ");
+    $purgeMissing->execute([':uid' => $uid, ':days' => $purgeMissingAfterDays]);
 
     if ($containers === []) {
         return;
@@ -717,7 +729,7 @@ if ($data && isset($data['uid'])) {
         // A null container list means the agent could not determine the state,
         // so the stored rows are left alone.
         if (($data['docker_containers'] ?? null) !== null) {
-            ingest_sync_docker_containers($pdo, $data['uid'], $data['docker_containers']);
+            ingest_sync_docker_containers($pdo, $data['uid'], $data['docker_containers'], 90);
         }
 
         $pdo->commit();
