@@ -73,6 +73,89 @@ function ingest_mark_agent_inventory_seen(PDO $pdo, string $uid): void {
     $stmt->execute([':uid' => $uid]);
 }
 
+/**
+ * Replaces the stored container set for one host with the scanned one.
+ * Everything currently present is marked missing first, then the scanned
+ * containers are upserted back to present, so a container that was removed,
+ * replaced by a recreate, or simply stopped ends up in the right state.
+ * The stored state column keeps the last observed Docker state and is never
+ * overwritten with a synthetic value.
+ */
+function ingest_sync_docker_containers(PDO $pdo, string $uid, array $containers): void {
+    $markMissing = $pdo->prepare("
+        UPDATE docker_containers
+           SET present = false,
+               missing_since = COALESCE(missing_since, CURRENT_TIMESTAMP)
+         WHERE uid = :uid
+           AND present = true
+    ");
+    $markMissing->execute([':uid' => $uid]);
+
+    if ($containers === []) {
+        return;
+    }
+
+    $upsert = $pdo->prepare("
+        INSERT INTO docker_containers (
+            uid, container_id, container_name, image_ref, image_id, image_version,
+            compose_project, compose_service, compose_working_dir,
+            state, health_status, exit_code, restart_count, restart_policy,
+            created_at, started_at, finished_at, ports, mounts,
+            present, last_seen_at, missing_since
+        ) VALUES (
+            :uid, :cid, :name, :image_ref, :image_id, :image_version,
+            :project, :service, :working_dir,
+            :state, :health, :exit_code, :restart_count, :restart_policy,
+            :created_at, :started_at, :finished_at, :ports, :mounts,
+            true, CURRENT_TIMESTAMP, NULL
+        ) ON CONFLICT (uid, container_id) DO UPDATE SET
+            container_name = EXCLUDED.container_name,
+            image_ref = EXCLUDED.image_ref,
+            image_id = EXCLUDED.image_id,
+            image_version = EXCLUDED.image_version,
+            compose_project = EXCLUDED.compose_project,
+            compose_service = EXCLUDED.compose_service,
+            compose_working_dir = EXCLUDED.compose_working_dir,
+            state = EXCLUDED.state,
+            health_status = EXCLUDED.health_status,
+            exit_code = EXCLUDED.exit_code,
+            restart_count = EXCLUDED.restart_count,
+            restart_policy = EXCLUDED.restart_policy,
+            created_at = EXCLUDED.created_at,
+            started_at = EXCLUDED.started_at,
+            finished_at = EXCLUDED.finished_at,
+            ports = EXCLUDED.ports,
+            mounts = EXCLUDED.mounts,
+            present = true,
+            last_seen_at = CURRENT_TIMESTAMP,
+            missing_since = NULL
+    ");
+
+    foreach ($containers as $container) {
+        $upsert->execute([
+            ':uid'            => $uid,
+            ':cid'            => $container['container_id'],
+            ':name'           => $container['container_name'],
+            ':image_ref'      => $container['image_ref'],
+            ':image_id'       => $container['image_id'],
+            ':image_version'  => $container['image_version'],
+            ':project'        => $container['compose_project'],
+            ':service'        => $container['compose_service'],
+            ':working_dir'    => $container['compose_working_dir'],
+            ':state'          => $container['state'],
+            ':health'         => $container['health_status'],
+            ':exit_code'      => $container['exit_code'],
+            ':restart_count'  => $container['restart_count'],
+            ':restart_policy' => $container['restart_policy'],
+            ':created_at'     => $container['created_at'],
+            ':started_at'     => $container['started_at'],
+            ':finished_at'    => $container['finished_at'],
+            ':ports'          => json_encode($container['ports']),
+            ':mounts'         => json_encode($container['mounts']),
+        ]);
+    }
+}
+
 function ingest_authenticate_agent_secret(PDO $pdo, string $uid, string $providedAgentSecret): string {
     try {
         $pepper = asscmo_enrollment_pepper();
@@ -256,6 +339,24 @@ function ingest_optional_bool(array $data, string $key, bool $default = false): 
     return filter_var($data[$key], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? $default;
 }
 
+function ingest_optional_timestamp(array $data, string $key): ?string {
+    $value = ingest_optional_string($data, $key, 64);
+
+    if ($value === null) {
+        return null;
+    }
+
+    $timestamp = strtotime($value);
+
+    // Docker reports 0001-01-01T00:00:00Z for containers that never started or
+    // never stopped. Anything that old is a placeholder, not a real timestamp.
+    if ($timestamp === false || $timestamp < 946684800) {
+        return null;
+    }
+
+    return gmdate('Y-m-d\TH:i:sP', $timestamp);
+}
+
 function ingest_string_array(array $data, string $key, int $maxItems, int $maxLength): array {
     if (!isset($data[$key]) || !is_array($data[$key])) {
         return [];
@@ -306,6 +407,98 @@ function ingest_ip_array(array $data, string $key, int $flags, int $maxItems): a
     }
 
     return array_values(array_unique($out));
+}
+
+function ingest_docker_mount_array(array $container, int $maxItems): array {
+    if (!isset($container['mounts']) || !is_array($container['mounts'])) {
+        return [];
+    }
+
+    $out = [];
+
+    foreach ($container['mounts'] as $mount) {
+        if (count($out) >= $maxItems) {
+            break;
+        }
+
+        if (!is_array($mount)) {
+            continue;
+        }
+
+        $destination = ingest_optional_string($mount, 'destination', 512);
+
+        if ($destination === null) {
+            continue;
+        }
+
+        $out[] = [
+            'type' => ingest_optional_string($mount, 'type', 32),
+            'source' => ingest_optional_string($mount, 'source', 512),
+            'destination' => $destination,
+            'rw' => ingest_optional_bool($mount, 'rw'),
+        ];
+    }
+
+    return $out;
+}
+
+/**
+ * Returns null when the agent did not report container state at all, which
+ * happens with an agent older than the Docker payload and with an agent that
+ * could not reach Docker. Stored rows must stay untouched in that case.
+ * An empty array means the host definitely has no containers.
+ */
+function ingest_docker_container_array(array $data, string $key, int $maxItems): ?array {
+    if (!array_key_exists($key, $data) || !is_array($data[$key])) {
+        return null;
+    }
+
+    $out = [];
+
+    foreach ($data[$key] as $container) {
+        if (count($out) >= $maxItems) {
+            break;
+        }
+
+        if (!is_array($container)) {
+            continue;
+        }
+
+        $containerId = ingest_optional_string($container, 'container_id', 64);
+
+        if ($containerId === null || !preg_match('/^[A-Fa-f0-9]{12,64}$/', $containerId)) {
+            continue;
+        }
+
+        // Keyed by container ID so a payload repeating an ID is stored once,
+        // keeping the first occurrence rather than letting a later stub win.
+        if (isset($out[$containerId])) {
+            continue;
+        }
+
+        $out[$containerId] = [
+            'container_id' => $containerId,
+            'container_name' => ingest_optional_string($container, 'container_name', 255),
+            'image_ref' => ingest_optional_string($container, 'image_ref', 255),
+            'image_id' => ingest_optional_string($container, 'image_id', 128),
+            'image_version' => ingest_optional_string($container, 'image_version', 64),
+            'compose_project' => ingest_optional_string($container, 'compose_project', 255),
+            'compose_service' => ingest_optional_string($container, 'compose_service', 255),
+            'compose_working_dir' => ingest_optional_string($container, 'compose_working_dir', 512),
+            'state' => ingest_optional_string($container, 'state', 32),
+            'health_status' => ingest_optional_string($container, 'health_status', 32),
+            'exit_code' => ingest_optional_int($container, 'exit_code', -1, 65535),
+            'restart_count' => ingest_optional_int($container, 'restart_count', 0, 1000000),
+            'restart_policy' => ingest_optional_string($container, 'restart_policy', 32),
+            'created_at' => ingest_optional_timestamp($container, 'created_at'),
+            'started_at' => ingest_optional_timestamp($container, 'started_at'),
+            'finished_at' => ingest_optional_timestamp($container, 'finished_at'),
+            'ports' => ingest_string_array($container, 'ports', 64, 128),
+            'mounts' => ingest_docker_mount_array($container, 64),
+        ];
+    }
+
+    return array_values($out);
 }
 
 function ingest_port_array(array $data, string $key, int $maxItems): array {
@@ -374,6 +567,7 @@ function normalize_inventory_payload(array $data): array {
         'agent_name' => ingest_optional_string($data, 'agent_name', 64),
         'agent_version' => ingest_optional_string($data, 'agent_version', 64),
         'agent_channel' => ingest_optional_string($data, 'agent_channel', 64),
+        'docker_containers' => ingest_docker_container_array($data, 'docker_containers', 256),
     ];
 }
 
@@ -414,6 +608,8 @@ if (!is_array($data) || json_last_error() !== JSON_ERROR_NONE) {
 $data = normalize_inventory_payload($data);
 
 if ($data && isset($data['uid'])) {
+    $pdo = null;
+
     try {
         $pdo = new PDO($dsn, $user, $password, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
         $authMethod = ingest_authenticate_inventory($pdo, $data['uid'], $legacySharedTokenEnabled, $legacyToken);
@@ -475,6 +671,8 @@ if ($data && isset($data['uid'])) {
       ELSE inventory.agent_update_time
     END";
 
+        $pdo->beginTransaction();
+
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
             ':uid'    => $data['uid'],
@@ -515,12 +713,24 @@ if ($data && isset($data['uid'])) {
             ':agent_version_check' => $data['agent_version'] ?? null,
             ':agent_channel'     => $data['agent_channel'] ?? null,
         ]);
+
+        // A null container list means the agent could not determine the state,
+        // so the stored rows are left alone.
+        if (($data['docker_containers'] ?? null) !== null) {
+            ingest_sync_docker_containers($pdo, $data['uid'], $data['docker_containers']);
+        }
+
+        $pdo->commit();
+
         if ($authMethod === 'agent_secret') {
             ingest_mark_agent_inventory_seen($pdo, $data['uid']);
         }
         echo "OK - Inventory updated for UID: " . htmlspecialchars((string)$data['uid'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         echo "\n";
     } catch (Throwable $e) {
+        if ($pdo instanceof PDO && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         error_log('ASS-CMO inventory DB error: ' . $e->getMessage());
         http_response_code(500);
         echo "Database error\n";
