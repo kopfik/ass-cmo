@@ -15,6 +15,7 @@ ASSCMO_AGENT_VERSION="$(cat "$AGENT_VERSION_FILE" 2>/dev/null | tr -d '\r\n' || 
 ASSCMO_AGENT_VERSION="${ASSCMO_AGENT_VERSION:-unknown}"
 ASSCMO_AGENT_CHANNEL="${ASSCMO_AGENT_CHANNEL:-stable}"
 ASSCMO_AGENT_UPDATE_TIME="${ASSCMO_AGENT_UPDATE_TIME:-}"
+DOCKER_MAX_CONTAINERS="${ASSCMO_DOCKER_MAX_CONTAINERS:-256}"
 
 BASE_URL="${ASSCMO_BASE_URL:-https://ass-cmo.example.com}"
 INV_URL="${BASE_URL}/inventory.php"
@@ -89,6 +90,75 @@ json_number_or_zero() {
         ''|*[!0-9.]*|.*|*.*.*) printf '0' ;;
         *) printf '%s' "$1" ;;
     esac
+}
+
+# Vraci JSON pole kontejneru, nebo 'null' kdyz je stav neznamy.
+# 'null' = klic docker_containers se do payloadu vubec neprida a server nesmi
+# sahnout na posledni znamy stav. Prazdne pole = definitivne zadne kontejnery.
+get_docker_containers_json() {
+    if ! command -v docker >/dev/null 2>&1; then
+        printf '[]'
+        return 0
+    fi
+
+    if ! docker_ids="$(timeout 10 docker ps -aq --no-trunc 2>/dev/null)"; then
+        printf 'null'
+        return 0
+    fi
+
+    if [ -z "$docker_ids" ]; then
+        printf '[]'
+        return 0
+    fi
+
+    # shellcheck disable=SC2086
+    if ! docker_raw="$(timeout 20 docker inspect $docker_ids 2>/dev/null)" || [ -z "$docker_raw" ]; then
+        printf 'null'
+        return 0
+    fi
+
+    if ! docker_out="$(printf '%s' "$docker_raw" | jq -c --argjson max "$DOCKER_MAX_CONTAINERS" '
+        def image_tag($ref):
+            ($ref // "")
+            | if startswith("sha256:") then null
+              else (split("/") | .[-1] | split(":")
+                    | if length > 1 and (.[-1] | . != "latest" and . != "") then .[-1] else null end)
+              end;
+        def ts_or_null($t):
+            if ($t // "") == "" or (($t // "") | startswith("0001-01-01")) then null else $t end;
+        [ .[] | {
+            container_id: .Id,
+            container_name: (.Name // "" | ltrimstr("/")),
+            image_ref: .Config.Image,
+            image_id: .Image,
+            image_version: (.Config.Labels["org.opencontainers.image.version"] // image_tag(.Config.Image)),
+            compose_project: (.Config.Labels["com.docker.compose.project"] // null),
+            compose_service: (.Config.Labels["com.docker.compose.service"] // null),
+            compose_working_dir: (.Config.Labels["com.docker.compose.project.working_dir"] // null),
+            state: .State.Status,
+            health_status: (.State.Health.Status // null),
+            exit_code: .State.ExitCode,
+            restart_count: .RestartCount,
+            restart_policy: (.HostConfig.RestartPolicy.Name // null),
+            created_at: ts_or_null(.Created),
+            started_at: ts_or_null(.State.StartedAt),
+            finished_at: ts_or_null(.State.FinishedAt),
+            ports: ([ (.NetworkSettings.Ports // {}) | to_entries[] | . as $e
+                      | if ($e.value == null) then $e.key
+                        else ($e.value[] | ((.HostIp // "") + ":" + (.HostPort // "") + "->" + $e.key))
+                        end ] | .[0:64]),
+            mounts: ([ .Mounts[]? | {
+                        type: .Type,
+                        source: (if .Type == "volume" then (.Name // .Source) else .Source end),
+                        destination: .Destination,
+                        rw: .RW
+                     } ] | .[0:64])
+        } ] | .[0:$max]')"; then
+        printf 'null'
+        return 0
+    fi
+
+    printf '%s' "$docker_out"
 }
 
 # --- 2. IDENTIFIKACE (UID & HOSTNAME) ---
@@ -170,6 +240,8 @@ else
     DOCK_VER="none"
 fi
 
+DOCKER_CONTAINERS_JSON="$(get_docker_containers_json)"
+
 ADMINS_JSON=$(awk '{print $3}' /root/.ssh/authorized_keys 2>/dev/null | sort -u | jq -R . | jq -s -c . || echo "[]")
 
 # --- 7. ČASY & UPDATY ---
@@ -201,6 +273,7 @@ ALL_IP6="$(json_array_or_empty "$ALL_IP6")"
 DNS_JSON="$(json_array_or_empty "$DNS_JSON")"
 PORTS="$(json_array_or_empty "$PORTS")"
 ADMINS_JSON="$(json_array_or_empty "$ADMINS_JSON")"
+DOCKER_CONTAINERS_JSON="${DOCKER_CONTAINERS_JSON:-null}"
 
 REBOOT_REQ="$(json_bool_or_false "$REBOOT_REQ")"
 DOCK_INST="$(json_bool_or_false "$DOCK_INST")"
@@ -251,6 +324,7 @@ if ! JSON_PAYLOAD=$(jq -n \
   --arg agent_version "$ASSCMO_AGENT_VERSION" \
   --arg agent_channel "$ASSCMO_AGENT_CHANNEL" \
   --arg agent_update_time "$ASSCMO_AGENT_UPDATE_TIME" \
+  --argjson dockc "$DOCKER_CONTAINERS_JSON" \
   '{
     uid: $uid, hostname: $hn, fqdn: $fqdn, 
     primary_interface: $p_iface, primary_ipv4_addr: $ip4, ipv4_gateway: $gw4, 
@@ -264,7 +338,8 @@ if ! JSON_PAYLOAD=$(jq -n \
     docker_installed: $dock_i, docker_version: $dock_v, admin_access: $admins,
     uptime_seconds: $upt_s, system_boot_time: $boot, system_upgrade_time: $upg,
     agent_name: $agent_name, agent_version: $agent_version, agent_channel: $agent_channel, agent_update_time: $agent_update_time
-  }'); then
+  }
+  | if $dockc == null then . else . + {docker_containers: $dockc} end'); then
     echo "ERROR: failed to build JSON payload" >&2
     exit 1
 fi
