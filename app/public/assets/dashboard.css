@@ -1018,6 +1018,9 @@ tr.group-row:hover td {
     font-weight: 600;
     color: var(--table-text);
     cursor: pointer;
+    /* Tables are nowrap, which still collapses runs of spaces. "pre" keeps them,
+       so a view can space out its group label with plain spaces in the SQL. */
+    white-space: pre;
 }
 
 .group-toggle::before {

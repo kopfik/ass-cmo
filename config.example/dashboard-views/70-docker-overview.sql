@@ -9,7 +9,9 @@
 
 SELECT
     -- Used as the group key and shown in the group header, never as a column.
-    i.hostname || COALESCE('   ' || i.primary_ipv4_addr, '') AS host,
+    -- The run of spaces survives to the browser because .group-toggle is
+    -- white-space: pre; widen or narrow the gap by editing it here.
+    i.hostname || COALESCE('        ' || i.primary_ipv4_addr, '') AS host,
     -- Hidden, but row_actions() needs it to build the SSH / application links.
     i.primary_ipv4_addr AS ip,
     CASE
