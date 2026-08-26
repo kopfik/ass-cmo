@@ -563,10 +563,12 @@
     let sortState = { index: null, direction: 1 };
 
     // Views can opt into collapsible groups with a "-- group-by: column" header.
-    // Without it, groupIndex stays null and every function below behaves exactly
+    // Without it, isGrouped stays false and every function below behaves exactly
     // as it did before grouping existed.
-    const groupIndex = table.dataset.groupBy ? Number(table.dataset.groupBy) : null;
-    const isGrouped = Number.isInteger(groupIndex) && groupIndex >= 0;
+    const isGrouped = table.dataset.grouped === '1';
+    // Only set when the view also declares "-- group-actions: true", meaning every
+    // row in a group shares one action target and the buttons belong on the header.
+    const hoistActions = isGrouped && table.dataset.groupActions === '1';
     const collapsedGroups = new Set();
 
     function dataRows() {
@@ -574,7 +576,7 @@
     }
 
     function groupValue(row) {
-        return (row.children[groupIndex]?.textContent || '').trim();
+        return row.dataset.group || '';
     }
 
     function visibleRows() {
@@ -636,8 +638,24 @@
             groupRow.className = 'group-row';
             groupRow.dataset.group = value;
 
+            // Mirrors the data rows so the sticky Actions column keeps lining up.
+            const actionsCell = document.createElement('td');
+            actionsCell.className = 'actions-col';
+
+            if (hoistActions) {
+                // Copied, never moved: this runs again after every sort, and the row
+                // that happens to be first changes. The data rows keep their own
+                // buttons in the DOM and CSS hides them instead.
+                const source = row.querySelector('.actions-col');
+                if (source) {
+                    actionsCell.innerHTML = source.innerHTML;
+                }
+            }
+
+            groupRow.appendChild(actionsCell);
+
             const cell = document.createElement('td');
-            cell.colSpan = headers.length;
+            cell.colSpan = Math.max(headers.length - 1, 1);
 
             const toggle = document.createElement('button');
             toggle.type = 'button';
@@ -762,7 +780,14 @@
 
     if (isGrouped) {
         tbody.addEventListener('click', event => {
-            const groupRow = event.target.closest('tr.group-row');
+            // Restricted to the toggle itself: with hoisted actions the header row
+            // also carries links and buttons that must not fold the group.
+            const toggle = event.target.closest('.group-toggle');
+            if (!toggle) {
+                return;
+            }
+
+            const groupRow = toggle.closest('tr.group-row');
             if (!groupRow) {
                 return;
             }

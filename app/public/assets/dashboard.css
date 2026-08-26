@@ -991,6 +991,14 @@ th.sort-desc::after {
 }
 
 /* ── Collapsible groups (views declaring "-- group-by: column") ── */
+
+/* With "-- group-actions: true" the buttons live on the group header. The data
+   rows keep their own copies in the DOM so sorting can rebuild the header from
+   whichever row ends up first; only their contents are hidden. */
+table[data-group-actions="1"] tbody tr:not(.group-row) .actions-col > * {
+    display: none;
+}
+
 tr.group-row td {
     background: var(--table-head);
     padding: 6px 10px;

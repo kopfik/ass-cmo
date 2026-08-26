@@ -3,8 +3,10 @@
 ## Unreleased
 
 ### Added
-- Dashboard tables can group rows into collapsible sections. A view opts in with a `-- group-by: <column>` header next to the existing `-- label:` and `-- description:` headers; the named column must be one the view actually selects, and anything else is ignored rather than breaking the view. Clicking a group header folds it, sorting a column reorders rows inside their group instead of tearing groups apart, the filter hides groups whose rows all drop out, and the row counter ignores both group headers and folded rows. Views without the header render through the same code path as before.
-- `70-docker-overview.sql` groups by `hostname`, so the Docker overview reads as a host list that expands into that host's containers.
+- Dashboard tables can group rows into collapsible sections. A view opts in with a `-- group-by: <column>` header next to the existing `-- label:` and `-- description:` headers. Clicking a group header folds it, sorting a column reorders rows inside their group instead of tearing groups apart, the filter hides groups whose rows all drop out, and the row counter ignores both group headers and folded rows. The grouping column is not rendered as a table column, since its value is already the group header; the value reaches the browser as a row attribute, so the column does not have to be displayed for grouping to work. Views without the header render through the same code path as before.
+- New `-- hide-columns: a, b` view header keeps named columns out of the rendered table while still selecting them, the way `notes` and `tags` already work. Useful for values that only feed the row action buttons.
+- New `-- group-actions: true` view header moves the row action buttons onto the group header row. It is opt-in because it is only correct when every row in a group shares one target: a view grouped by location holds several different hosts per group and must keep per-row actions.
+- `70-docker-overview.sql` now groups by host. The host name and its IP are combined into one `host` value shown in the group header, the separate `hostname` and `ip` columns are gone from the table, and the SSH and application links sit on the host header row instead of being repeated on every container. The Docker overview therefore reads as a host list that expands into that host's containers.
 
 ## v0.9.0
 

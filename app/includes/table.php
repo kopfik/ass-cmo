@@ -42,21 +42,14 @@ function render_table_tools(int $rowCount): void {
     <?php
 }
 
-function render_dashboard_table(array $rows, array $columns, array $ctx, string $groupBy = ''): void {
-    // The browser groups by column position, and the Actions column is column 0,
-    // so the offset is the visible column index plus one.
-    $groupIndex = null;
-
-    if ($groupBy !== '') {
-        $position = array_search($groupBy, array_map('strval', $columns), true);
-        if ($position !== false) {
-            $groupIndex = $position + 1;
-        }
-    }
+function render_dashboard_table(array $rows, array $columns, array $ctx, string $groupBy = '', bool $groupActions = false): void {
+    // The group value travels as a row attribute rather than being read back out
+    // of a rendered cell, so the grouping column does not have to be displayed.
+    $grouped = $groupBy !== '' && $rows !== [] && array_key_exists($groupBy, $rows[0]);
 
     ?>
             <div class="table-wrap">
-                <table id="dashboard-table"<?= $groupIndex !== null ? ' data-group-by="' . h($groupIndex) . '"' : '' ?>>
+                <table id="dashboard-table"<?= $grouped ? ' data-grouped="1"' : '' ?><?= $grouped && $groupActions ? ' data-group-actions="1"' : '' ?>>
                     <thead>
                     <tr>
                         <th class="actions-col" data-sortable="0">Actions</th>
@@ -67,7 +60,7 @@ function render_dashboard_table(array $rows, array $columns, array $ctx, string 
                     </thead>
                     <tbody>
                     <?php foreach ($rows as $row): ?>
-                        <tr>
+                        <tr<?= $grouped ? ' data-group="' . h((string)($row[$groupBy] ?? '')) . '"' : '' ?>>
                             <td class="actions-col"><?= render_action_buttons($row, $ctx) ?></td>
                             <?php foreach ($columns as $col): ?>
                                 <td><?= h(display_cell_value((string)$col, $row[$col] ?? '')) ?></td>

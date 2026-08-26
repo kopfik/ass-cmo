@@ -588,7 +588,15 @@ if ($isEnrollment || $isAgentAuth || $isRevokedAgents) {
     }
 }
 
-$hiddenColumns     = ['notes', 'tags'];
+// The group column is never rendered as a column: its value is shown in the
+// group header instead.
+$viewGroupBy       = (string)($currentView['group_by'] ?? '');
+$hiddenColumns     = array_merge(['notes', 'tags'], (array)($currentView['hide_columns'] ?? []));
+
+if ($viewGroupBy !== '') {
+    $hiddenColumns[] = $viewGroupBy;
+}
+
 $columns           = ($isEnrollment || $isAgentAuth || $isRevokedAgents) ? [] : visible_table_columns($rows, $hiddenColumns);
 $copyCommandGroups = build_copy_command_groups($ctx);
 
@@ -649,7 +657,7 @@ render_head('ASS-CMO Dashboard', $ctx);
             <div class="empty">No rows returned.</div>
         <?php else: ?>
             <?php render_table_tools(count($rows)); ?>
-            <?php render_dashboard_table($rows, $columns, $ctx, (string)($currentView['group_by'] ?? '')); ?>
+            <?php render_dashboard_table($rows, $columns, $ctx, $viewGroupBy, (bool)($currentView['group_actions'] ?? false)); ?>
         <?php endif; ?>
     </main>
 </div>

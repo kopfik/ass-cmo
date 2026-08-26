@@ -1,12 +1,16 @@
 -- label: Docker overview
 -- description: Docker containers currently present on hosts reporting to ASS-CMO, grouped by host and compose project.
--- group-by: hostname
+-- group-by: host
+-- hide-columns: ip
+-- group-actions: true
 
 -- Published ports are stored in docker_containers.ports but deliberately not shown here:
 -- a single container can publish dozens of them and the column made the table unusably wide.
 
 SELECT
-    i.hostname,
+    -- Used as the group key and shown in the group header, never as a column.
+    i.hostname || COALESCE('   ' || i.primary_ipv4_addr, '') AS host,
+    -- Hidden, but row_actions() needs it to build the SSH / application links.
     i.primary_ipv4_addr AS ip,
     CASE
         WHEN d.state = 'running' AND d.health_status = 'unhealthy' THEN '🔴 unhealthy'
