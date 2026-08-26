@@ -27,7 +27,9 @@ SELECT
     NULLIF(d.restart_count, 0) AS restarts,
     (SELECT string_agg(p, ', ') FROM jsonb_array_elements_text(d.ports) AS p) AS ports,
     d.restart_policy AS policy,
-    date_trunc('second', d.last_seen_at AT TIME ZONE 'Europe/Prague') AS last_seen
+    date_trunc('second', d.last_seen_at AT TIME ZONE 'Europe/Prague') AS last_seen,
+    -- Hidden by the dashboard, but read by row_actions() for per-host launcher links.
+    i.notes
 FROM docker_containers d
 JOIN inventory i USING (uid)
 WHERE d.present = true

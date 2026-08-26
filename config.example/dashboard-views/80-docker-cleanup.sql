@@ -34,11 +34,13 @@ SELECT
     c.compose_service AS service,
     c.container_name AS container,
     COALESCE(c.state, 'unknown')
-        || CASE WHEN c.state = 'exited' THEN ' (' || c.exit_code || ')' ELSE '' END AS last_state,
+        || CASE WHEN c.state = 'exited' THEN ' (' || COALESCE(c.exit_code::text, '?') || ')' ELSE '' END AS last_state,
     c.image_ref AS image,
     c.image_version AS version,
     date_trunc('minute', justify_interval(now() - COALESCE(c.missing_since, c.finished_at))) AS age,
-    date_trunc('second', c.last_seen_at AT TIME ZONE 'Europe/Prague') AS last_seen
+    date_trunc('second', c.last_seen_at AT TIME ZONE 'Europe/Prague') AS last_seen,
+    -- Hidden by the dashboard, but read by row_actions() for per-host launcher links.
+    i.notes
 FROM classified c
 JOIN inventory i USING (uid)
 ORDER BY

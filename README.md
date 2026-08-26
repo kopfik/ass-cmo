@@ -21,6 +21,7 @@ The long-term idea is to grow into a practical replacement for tools such as PuT
 ## What ASS-CMO does
 
 - Collects and stores fresh system inventory from Linux and Windows hosts.
+- Collects Docker container inventory from hosts that run Docker, grouped by compose project and service.
 - Provides secure agent enrollment with per-host agent secrets.
 - Presents a single admin overview dashboard built on read-only SQL views.
 - Launches local SSH, RDP, and web connections straight from the dashboard through workstation URI handlers.
@@ -42,6 +43,7 @@ The long-term idea is to grow into a practical replacement for tools such as PuT
 - Linux (shell) and Windows (PowerShell) inventory-only agents.
 - systemd timer and apt/pacman hooks for Linux agents; Scheduled Task for Windows agents.
 - Read-only dashboard SQL views, with table filtering and sorting.
+- Docker container overview and cleanup dashboard views (Linux agents).
 - Theme switcher and PWA metadata.
 - SSH / RDP / application action buttons and `assssh://` / `assrdp://` URI handler installers for Linux and Windows.
 
@@ -96,6 +98,7 @@ v0.5.x  first installable and usable ASS-CMO version
 v0.6.x  dashboard and launcher refinements
 v0.7.x  internal releases and hotfixes
 v0.8.0  secure enrollment, per-host secrets, revocation, and clean public release
+v0.9.0  Docker container inventory and Docker dashboard views
 v1.0.0  later stable release
 ```
 

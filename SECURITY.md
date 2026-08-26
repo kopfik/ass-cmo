@@ -30,9 +30,20 @@ The inventory protocol is intended to be one-way:
 
 The legacy shared inventory token (`ASSCMO_INVENTORY_TOKEN`) is deprecated and disabled by default. It remains as a migration-only compatibility path and must be explicitly re-enabled with `ASSCMO_LEGACY_SHARED_INVENTORY_TOKEN_ENABLED=true`.
 
+### Docker container inventory
+
+On hosts where Docker is installed, Linux agents also report container inventory. The stored data includes container and image names, compose project and service names, container state and health, published ports, and bind/volume mounts. Mount sources are host filesystem paths, so this data reveals where a stack keeps its data on the managed host. It is stored in the `docker_containers` table and is readable by the dashboard read-only role, like the rest of the inventory.
+
+Two categories are deliberately not collected:
+
+- **Container labels are not stored wholesale.** Only `com.docker.compose.project`, `com.docker.compose.service`, `com.docker.compose.project.working_dir`, and `org.opencontainers.image.version` are extracted into columns. The remaining labels are mostly churn — config hashes, container numbers — and label values are a common place for reverse-proxy routing rules containing internal hostnames, and for scheduled shell commands.
+- **`State.Health.Log` is not stored.** It holds healthcheck command output, which is unbounded in size and routinely contains URLs and credentials.
+
+Collecting this data does not widen the agent's privileges. The Linux agent already runs as root, and root on a Docker host is already equivalent to control over the Docker daemon.
+
 ### Agent updater
 
-Automatic agent updater is not shipped in public v0.8.0. It was removed/deferred until a secure update channel, integrity/signature verification model, rollback behavior, and trust boundaries are designed.
+No automatic agent updater is shipped. It is deferred until a secure update channel, integrity/signature verification model, rollback behavior, and trust boundaries are designed.
 
 ### URI handlers
 
@@ -68,9 +79,10 @@ Agent enrollment uses a two-phase flow: the installer initiates a pending reques
 ## Current known risks
 
 - The shared inventory token (`ASSCMO_INVENTORY_TOKEN`) is deprecated and disabled by default. It is a migration-only compatibility path for private internal deployments that have not yet migrated to per-host secrets.
-- Automatic agent updater is not shipped in public v0.8.0.
+- No automatic agent updater is shipped; agent updates are operator-triggered.
 - URI handler target validation needs continued hardening.
 - Inventory payload schema validation needs continued hardening.
+- Docker container mount paths and published ports are stored in the inventory database and are visible to anyone with dashboard access.
 - Adminer exposure must be controlled in production deployments.
 
 ## Deployment exposure model

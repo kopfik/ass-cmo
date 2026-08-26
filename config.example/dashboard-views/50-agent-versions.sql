@@ -10,7 +10,7 @@ SELECT
         WHEN os_name ILIKE '%microsoft%' OR os_name ILIKE '%windows%' THEN
             CASE WHEN agent_version = '0.8.1' THEN '🟢 LATEST' ELSE '🟠 OUTDATED' END
         ELSE
-            CASE WHEN agent_version = '0.8.0' THEN '🟢 LATEST' ELSE '🟠 OUTDATED' END
+            CASE WHEN agent_version = '0.9.0' THEN '🟢 LATEST' ELSE '🟠 OUTDATED' END
     END AS agent_status,
     agent_version,
     date_trunc('second', agent_update_time AT TIME ZONE 'Europe/Prague') AS agent_update_time,
@@ -22,7 +22,7 @@ ORDER BY
         WHEN os_name ILIKE '%microsoft%' OR os_name ILIKE '%windows%' THEN
             CASE WHEN agent_version = '0.8.1' THEN 2 ELSE 1 END
         ELSE
-            CASE WHEN agent_version = '0.8.0' THEN 2 ELSE 1 END
+            CASE WHEN agent_version = '0.9.0' THEN 2 ELSE 1 END
     END,
     os_name,
     agent_version,

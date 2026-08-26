@@ -208,6 +208,8 @@ Distribution package hooks, where applicable:
 
 The default timer runs 30 seconds after boot and at 00:01 and 12:01. For larger fleets, consider adding a randomized delay in the timer unit to spread server load.
 
+On hosts where Docker is installed, the agent also reports the host's containers. It runs `docker ps -aq --no-trunc` followed by `docker inspect`, both under a timeout, so an unresponsive Docker daemon cannot stall a package transaction through the apt or pacman hook. A host without Docker reports an empty container list. A host where Docker is installed but the daemon cannot be reached omits the field entirely, which leaves its previously reported containers in place instead of clearing them. What container data is stored, and what is deliberately not stored, is documented in [SECURITY.md](SECURITY.md).
+
 To remove the Linux agent, run as root:
 
 ```bash

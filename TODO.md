@@ -603,7 +603,20 @@ Suggested wording:
 
 ---
 
+## Docker container inventory
+
+Shipped in `0.9.0`: Linux agent collection, `docker_containers` table, ingest with 90-day retention, and the `70-docker-overview` / `80-docker-cleanup` example views. Remaining work:
+
+- [ ] `feature` Windows agent Docker support. The payload contract is OS-agnostic, so this is agent-side only: `agents/windows/ass-cmo-agent.ps1` already detects Docker for `docker_installed`/`docker_version` but does not build `docker_containers`. It has no `jq`, so the payload has to be assembled with PowerShell objects instead.
+- [ ] `feature` Grouped/collapsible dashboard tables, so a Docker view can read as a host list that expands into its containers instead of one flat table. Preferred approach is client-side grouping in `app/public/assets/dashboard.js`, opted into per view with a `-- group-by: hostname` header parsed by `parse_view_file()` in `app/includes/views.php`, next to the existing `-- label:` and `-- description:`. This would apply to any view, not just the Docker ones. The alternative — a dedicated PHP branch in `index.php` alongside `$isEnrollment` / `$isAgentAuth` / `$isRevokedAgents` — is much more code and would only ever serve one view.
+- [ ] `later` Consider a `--print` dry-run flag for the Linux agent that builds the payload and prints it without sending. Useful when verifying a manual agent install before a version bump rolls it out fleet-wide.
+- [ ] `docs` Add a Docker overview screenshot to `docs/images/dashboard/` and reference it in `README.md`, alongside the existing general and Linux overview screenshots.
+
+---
+
 ## Docker / compose / images
+
+_(This section is about the ASS-CMO stack's own containers, not the Docker inventory feature above.)_
 
 - [ ] `hardening` Pin Adminer image version instead of using `latest`.
 - [ ] `hardening` Add PostgreSQL healthcheck.
