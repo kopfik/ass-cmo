@@ -98,13 +98,13 @@ These should return `HTTP/... 200`. If any returns a non-200 status, check nginx
 Verify that the core tables exist. This uses the default installer values unless you have exported different `POSTGRES_USER` or `POSTGRES_DB` values:
 
 ```bash
-docker exec ass-postgres psql -U "${POSTGRES_USER:-asscmo}" -d "${POSTGRES_DB:-inventory_db}" -tAc "SELECT to_regclass('public.inventory'), to_regclass('public.agent_enrollment_requests'), to_regclass('public.agent_auth'), to_regclass('public.agent_auth_history')"
+docker exec ass-postgres psql -U "${POSTGRES_USER:-asscmo}" -d "${POSTGRES_DB:-inventory_db}" -tAc "SELECT to_regclass('public.inventory'), to_regclass('public.agent_enrollment_requests'), to_regclass('public.agent_auth'), to_regclass('public.agent_auth_history'), to_regclass('public.docker_containers')"
 ```
 
-Expected output — all four table names returned, none `NULL`:
+Expected output — all five table names returned, none `NULL`:
 
 ```text
-inventory|agent_enrollment_requests|agent_auth|agent_auth_history
+inventory|agent_enrollment_requests|agent_auth|agent_auth_history|docker_containers
 ```
 
 If any entry shows `NULL`, the schema is incomplete.
@@ -114,6 +114,10 @@ The `database/init/*.sql` files run automatically via `docker-entrypoint-initdb.
 ```bash
 for f in database/init/*.sql; do docker exec -i ass-postgres psql -U asscmo -d inventory_db < "$f"; done
 ```
+
+Every `database/init/*.sql` file is idempotent, so re-applying them on an existing database is safe. `install.sh` also re-applies them on every run, not only on a fresh install.
+
+When a schema file adds a new table, the read-only dashboard role does not gain access to it automatically. Re-run `database/scripts/002_dashboard_readonly_user.sql` (see [Dashboard access checks](#dashboard-access-checks)) after applying the schema, otherwise dashboard views over the new table fail with `permission denied`.
 
 ---
 

@@ -21,6 +21,7 @@ GRANT USAGE ON SCHEMA public TO :"dashboard_user";
 -- role by default. If dashboard access to non-inventory data is needed later,
 -- expose it through an explicit safe view or allowlisted table grant.
 GRANT SELECT ON TABLE inventory TO :"dashboard_user";
+GRANT SELECT ON TABLE docker_containers TO :"dashboard_user";
 REVOKE SELECT ON TABLE agent_enrollment_requests, agent_auth FROM :"dashboard_user";
 GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO :"dashboard_user";
 
