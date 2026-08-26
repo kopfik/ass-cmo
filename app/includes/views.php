@@ -52,6 +52,18 @@ function parse_view_file(string $path): ?array {
         $description = trim($m[1]);
     }
 
+    // Optional "-- group-by: column" header turns the rendered table into
+    // collapsible groups keyed by that output column. Views without it render
+    // exactly as before.
+    $groupBy = '';
+
+    if (preg_match('/^\s*--\s*group-by:\s*(.+)$/mi', $sql, $m)) {
+        $candidate = trim($m[1]);
+        if (preg_match('/^[a-zA-Z0-9_]+$/', $candidate)) {
+            $groupBy = $candidate;
+        }
+    }
+
     $id = pathinfo($path, PATHINFO_FILENAME);
     $id = preg_replace('/[^a-zA-Z0-9_-]+/', '-', $id) ?: $id;
 
@@ -59,6 +71,7 @@ function parse_view_file(string $path): ?array {
         'id' => $id,
         'label' => $label,
         'description' => $description,
+        'group_by' => $groupBy,
         'path' => $path,
         'sql' => $sql,
     ];

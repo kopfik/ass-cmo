@@ -1,5 +1,9 @@
 -- label: Docker overview
 -- description: Docker containers currently present on hosts reporting to ASS-CMO, grouped by host and compose project.
+-- group-by: hostname
+
+-- Published ports are stored in docker_containers.ports but deliberately not shown here:
+-- a single container can publish dozens of them and the column made the table unusably wide.
 
 SELECT
     i.hostname,
@@ -13,7 +17,7 @@ SELECT
         WHEN d.state = 'dead' THEN '🔴 dead'
         WHEN d.state = 'paused' THEN '⚪ paused'
         WHEN d.state = 'exited' AND d.exit_code = 0 THEN '🟡 exited'
-        WHEN d.state = 'exited' THEN '🟠 exited ' || d.exit_code
+        WHEN d.state = 'exited' THEN '🟠 exited ' || COALESCE(d.exit_code::text, '?')
         ELSE '⚪ ' || COALESCE(d.state, 'unknown')
     END AS status,
     d.compose_project AS project,
@@ -21,11 +25,11 @@ SELECT
     d.container_name AS container,
     d.image_ref AS image,
     d.image_version AS version,
+    floor(EXTRACT(epoch FROM (now() - d.created_at)) / 86400)::integer || 'd' AS age,
     CASE
         WHEN d.state = 'running' THEN date_trunc('minute', justify_interval(now() - d.started_at))
     END AS uptime,
     NULLIF(d.restart_count, 0) AS restarts,
-    (SELECT string_agg(p, ', ') FROM jsonb_array_elements_text(d.ports) AS p) AS ports,
     d.restart_policy AS policy,
     date_trunc('second', d.last_seen_at AT TIME ZONE 'Europe/Prague') AS last_seen,
     -- Hidden by the dashboard, but read by row_actions() for per-host launcher links.

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Dashboard tables can group rows into collapsible sections. A view opts in with a `-- group-by: <column>` header next to the existing `-- label:` and `-- description:` headers; the named column must be one the view actually selects, and anything else is ignored rather than breaking the view. Clicking a group header folds it, sorting a column reorders rows inside their group instead of tearing groups apart, the filter hides groups whose rows all drop out, and the row counter ignores both group headers and folded rows. Views without the header render through the same code path as before.
+- `70-docker-overview.sql` groups by `hostname`, so the Docker overview reads as a host list that expands into that host's containers.
+
 ## v0.9.0
 
 ### Added

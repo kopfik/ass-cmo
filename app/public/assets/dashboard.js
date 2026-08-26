@@ -562,8 +562,23 @@
     const headers = Array.from(table.querySelectorAll('thead th'));
     let sortState = { index: null, direction: 1 };
 
+    // Views can opt into collapsible groups with a "-- group-by: column" header.
+    // Without it, groupIndex stays null and every function below behaves exactly
+    // as it did before grouping existed.
+    const groupIndex = table.dataset.groupBy ? Number(table.dataset.groupBy) : null;
+    const isGrouped = Number.isInteger(groupIndex) && groupIndex >= 0;
+    const collapsedGroups = new Set();
+
+    function dataRows() {
+        return Array.from(tbody.querySelectorAll('tr')).filter(row => !row.classList.contains('group-row'));
+    }
+
+    function groupValue(row) {
+        return (row.children[groupIndex]?.textContent || '').trim();
+    }
+
     function visibleRows() {
-        return Array.from(tbody.querySelectorAll('tr')).filter(row => row.style.display !== 'none');
+        return dataRows().filter(row => row.style.display !== 'none');
     }
 
     function updateRowCount() {
@@ -571,7 +586,7 @@
             return;
         }
 
-        const total = tbody.querySelectorAll('tr').length;
+        const total = dataRows().length;
         const visible = visibleRows().length;
         rowCount.textContent = visible + ' / ' + total + ' rows';
     }
@@ -600,20 +615,92 @@
         });
     }
 
-    function applyFilter() {
-        if (!filter) {
-            updateRowCount();
-            return;
+    function buildGroupRows() {
+        for (const row of Array.from(tbody.querySelectorAll('tr.group-row'))) {
+            row.remove();
         }
 
-        const query = normalizeValue(filter.value);
+        let currentValue = null;
 
-        for (const row of tbody.querySelectorAll('tr')) {
+        for (const row of dataRows()) {
+            const value = groupValue(row);
+            row.dataset.group = value;
+
+            if (value === currentValue) {
+                continue;
+            }
+
+            currentValue = value;
+
+            const groupRow = document.createElement('tr');
+            groupRow.className = 'group-row';
+            groupRow.dataset.group = value;
+
+            const cell = document.createElement('td');
+            cell.colSpan = headers.length;
+
+            const toggle = document.createElement('button');
+            toggle.type = 'button';
+            toggle.className = 'group-toggle';
+            toggle.textContent = value === '' ? '(none)' : value;
+            cell.appendChild(toggle);
+
+            const count = document.createElement('span');
+            count.className = 'group-count';
+            cell.appendChild(count);
+
+            groupRow.appendChild(cell);
+            tbody.insertBefore(groupRow, row);
+        }
+    }
+
+    function updateGroupVisibility() {
+        const members = new Map();
+
+        for (const row of dataRows()) {
+            const value = row.dataset.group || '';
+            if (!members.has(value)) {
+                members.set(value, []);
+            }
+            members.get(value).push(row);
+        }
+
+        for (const groupRow of tbody.querySelectorAll('tr.group-row')) {
+            const value = groupRow.dataset.group || '';
+            const collapsed = collapsedGroups.has(value);
+            const matching = (members.get(value) || []).filter(row => row.style.display !== 'none');
+
+            if (collapsed) {
+                for (const row of matching) {
+                    row.style.display = 'none';
+                }
+            }
+
+            groupRow.style.display = matching.length === 0 ? 'none' : '';
+            groupRow.classList.toggle('is-collapsed', collapsed);
+
+            const count = groupRow.querySelector('.group-count');
+            if (count) {
+                count.textContent = matching.length === 1 ? '1 row' : matching.length + ' rows';
+            }
+        }
+    }
+
+    function applyFilter() {
+        const query = filter ? normalizeValue(filter.value) : '';
+
+        for (const row of dataRows()) {
             const text = normalizeValue(row.textContent || '');
             row.style.display = query === '' || text.includes(query) ? '' : 'none';
         }
 
+        // Counted before collapsing, so folding a group does not look like the
+        // filter removed rows.
         updateRowCount();
+
+        if (isGrouped) {
+            updateGroupVisibility();
+        }
     }
 
     function clearSortMarkers() {
@@ -623,7 +710,7 @@
     }
 
     function sortByColumn(index) {
-        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const rows = dataRows();
 
         if (sortState.index === index) {
             sortState.direction *= -1;
@@ -633,6 +720,15 @@
         }
 
         rows.sort((rowA, rowB) => {
+            // Sorting must not tear groups apart, so the group value always wins
+            // and the clicked column only orders rows inside a group.
+            if (isGrouped) {
+                const groupCompare = compareValues(groupValue(rowA), groupValue(rowB));
+                if (groupCompare !== 0) {
+                    return groupCompare;
+                }
+            }
+
             const a = rowA.children[index]?.textContent || '';
             const b = rowB.children[index]?.textContent || '';
             return compareValues(a, b) * sortState.direction;
@@ -640,6 +736,10 @@
 
         for (const row of rows) {
             tbody.appendChild(row);
+        }
+
+        if (isGrouped) {
+            buildGroupRows();
         }
 
         clearSortMarkers();
@@ -660,5 +760,35 @@
         filter.addEventListener('input', applyFilter);
     }
 
-    updateRowCount();
+    if (isGrouped) {
+        tbody.addEventListener('click', event => {
+            const groupRow = event.target.closest('tr.group-row');
+            if (!groupRow) {
+                return;
+            }
+
+            const value = groupRow.dataset.group || '';
+
+            if (collapsedGroups.has(value)) {
+                collapsedGroups.delete(value);
+            } else {
+                collapsedGroups.add(value);
+            }
+
+            // Re-runs the filter first, so un-collapsing restores exactly the rows
+            // the current filter allows.
+            applyFilter();
+        });
+
+        // Rows arrive in whatever order the view's SQL produced. Sorting by the
+        // group value first guarantees each group is contiguous.
+        const initial = dataRows();
+        initial.sort((rowA, rowB) => compareValues(groupValue(rowA), groupValue(rowB)));
+        for (const row of initial) {
+            tbody.appendChild(row);
+        }
+        buildGroupRows();
+    }
+
+    applyFilter();
 })();

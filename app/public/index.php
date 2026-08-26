@@ -649,7 +649,7 @@ render_head('ASS-CMO Dashboard', $ctx);
             <div class="empty">No rows returned.</div>
         <?php else: ?>
             <?php render_table_tools(count($rows)); ?>
-            <?php render_dashboard_table($rows, $columns, $ctx); ?>
+            <?php render_dashboard_table($rows, $columns, $ctx, (string)($currentView['group_by'] ?? '')); ?>
         <?php endif; ?>
     </main>
 </div>

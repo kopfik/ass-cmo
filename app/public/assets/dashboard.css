@@ -990,6 +990,45 @@ th.sort-desc::after {
     color: var(--table-text);
 }
 
+/* ── Collapsible groups (views declaring "-- group-by: column") ── */
+tr.group-row td {
+    background: var(--table-head);
+    padding: 6px 10px;
+    position: sticky;
+    left: 0;
+}
+
+tr.group-row:hover td {
+    background: var(--table-head-hover);
+}
+
+.group-toggle {
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    font-weight: 600;
+    color: var(--table-text);
+    cursor: pointer;
+}
+
+.group-toggle::before {
+    content: "▾";
+    display: inline-block;
+    width: 1em;
+    color: var(--table-muted);
+}
+
+tr.group-row.is-collapsed .group-toggle::before {
+    content: "▸";
+}
+
+.group-count {
+    margin-left: 10px;
+    color: var(--table-muted);
+    font-size: 12px;
+}
+
 /* ── Filter / search bar (shared by the table filter and Revoke search) ── */
 .table-tools {
     display: flex;

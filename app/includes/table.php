@@ -42,10 +42,21 @@ function render_table_tools(int $rowCount): void {
     <?php
 }
 
-function render_dashboard_table(array $rows, array $columns, array $ctx): void {
+function render_dashboard_table(array $rows, array $columns, array $ctx, string $groupBy = ''): void {
+    // The browser groups by column position, and the Actions column is column 0,
+    // so the offset is the visible column index plus one.
+    $groupIndex = null;
+
+    if ($groupBy !== '') {
+        $position = array_search($groupBy, array_map('strval', $columns), true);
+        if ($position !== false) {
+            $groupIndex = $position + 1;
+        }
+    }
+
     ?>
             <div class="table-wrap">
-                <table id="dashboard-table">
+                <table id="dashboard-table"<?= $groupIndex !== null ? ' data-group-by="' . h($groupIndex) . '"' : '' ?>>
                     <thead>
                     <tr>
                         <th class="actions-col" data-sortable="0">Actions</th>
