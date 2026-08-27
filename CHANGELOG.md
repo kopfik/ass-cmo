@@ -8,6 +8,9 @@
 - In a grouped table, the row action buttons move onto the group header row when every multi-row group turned out to have identical actions. Grouping by host makes all rows in a group target that one host, so repeating the buttons on each row is noise; grouping by something like a network segment puts several different hosts in one group, and each row keeps its own buttons. The table decides this from the rendered rows, so a view only declares what to group by and never has to say where the buttons belong.
 - `70-docker-overview.sql` now groups by host. The host name and its IP are combined into one `host` value shown in the group header, and the separate `hostname` and `ip` columns are gone from the table, so the Docker overview reads as a host list that expands into that host's containers. Its SSH and application links land on the host header row through the rule above.
 
+### Fixed
+- Dashboard assets are cache-busted by file modification time again. `dashboard.css` and `theme.js` were versioned by the application version, which does not change when an asset is edited within a release, so browsers kept a stale copy; `theme.js` had no cache-busting at all. `dashboard.js` did intend to use the modification time, but read it from `/app/public/assets/`, a path that does not exist in the PHP container — `compose.yml` mounts `app/public` at `/var/www/html` — so it silently fell back to the application version too. All three now go through one `asset_version()` helper that resolves the file in either layout.
+
 ## v0.9.0
 
 ### Added

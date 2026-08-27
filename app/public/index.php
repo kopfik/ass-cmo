@@ -40,15 +40,6 @@ function dashboard_admin_actor(): string {
     return $remoteAddr !== '' ? 'dashboard-ui ' . $remoteAddr : 'dashboard-ui';
 }
 
-function dashboard_asset_version(array $ctx): string {
-    $mtime = @filemtime('/app/public/assets/dashboard.js');
-    if ($mtime !== false) {
-        return rawurlencode((string)$mtime);
-    }
-
-    return app_version_query($ctx);
-}
-
 function render_enrollment_main(array $rows, string $error, ?array $flash, string $csrfToken, ?int $highlightId): void {
     ?>
     <?php if ($flash !== null): ?>
@@ -678,5 +669,5 @@ render_head('ASS-CMO Dashboard', $ctx);
 
 <?php render_theme_script(); ?>
 
-<script src="/assets/dashboard.js?v=<?= h(dashboard_asset_version($ctx)) ?>" defer></script>
+<script src="/assets/dashboard.js?v=<?= h(asset_version('dashboard.js')) ?>" defer></script>
 <?php render_page_end(); ?>

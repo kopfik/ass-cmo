@@ -74,3 +74,29 @@ function app_context(): array {
 function app_version_query(array $ctx): string {
     return rawurlencode((string)($ctx['app_version'] ?? 'unknown'));
 }
+
+/**
+ * Cache-busting token for a file in the public assets directory.
+ *
+ * Uses the file's modification time so an edited asset is picked up on the next
+ * request. The application version is only a fallback: it does not change when
+ * an asset is edited within a release, which leaves browsers on a stale copy.
+ */
+function asset_version(string $file): string {
+    $file = basename($file);
+
+    $roots = [
+        '/var/www/html/assets',
+        __DIR__ . '/../public/assets',
+    ];
+
+    foreach ($roots as $root) {
+        $mtime = @filemtime($root . '/' . $file);
+
+        if ($mtime !== false) {
+            return rawurlencode((string)$mtime);
+        }
+    }
+
+    return rawurlencode(read_version_file('/app/meta/VERSION'));
+}

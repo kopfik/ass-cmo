@@ -16,7 +16,7 @@ function render_head(string $title, array $ctx): void {
     <link rel="icon" type="image/png" sizes="192x192" href="/branding/logo/icon-192.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/branding/logo/favicon-32.png">
     <link rel="apple-touch-icon" href="/branding/logo/icon-192.png">
-    <link rel="stylesheet" href="/assets/dashboard.css?v=<?= h(app_version_query($ctx)) ?>">
+    <link rel="stylesheet" href="/assets/dashboard.css?v=<?= h(asset_version('dashboard.css')) ?>">
 </head>
 <body>
     <?php
@@ -129,7 +129,7 @@ function render_sidebar(array $ctx, array $views, ?string $selectedViewId, array
 
 function render_theme_script(): void {
     ?>
-<script src="/assets/theme.js" defer></script>
+<script src="/assets/theme.js?v=<?= h(asset_version('theme.js')) ?>" defer></script>
     <?php
 }
 
