@@ -2,7 +2,6 @@
 -- description: Docker containers currently present on hosts reporting to ASS-CMO, grouped by host and compose project.
 -- group-by: host
 -- hide-columns: ip
--- group-actions: true
 
 -- Published ports are stored in docker_containers.ports but deliberately not shown here:
 -- a single container can publish dozens of them and the column made the table unusably wide.

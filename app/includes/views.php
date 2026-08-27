@@ -77,13 +77,6 @@ function parse_view_file(string $path): ?array {
         }
     }
 
-    // Optional "-- group-actions: true" header moves the row action buttons onto
-    // the group header row. Only correct when every row in a group shares the
-    // same target, so it stays opt-in: grouping by location, for example, puts
-    // several different hosts in one group and must keep per-row actions.
-    $groupActions = $groupBy !== ''
-        && preg_match('/^\s*--\s*group-actions:\s*(?:true|yes|1)\s*$/mi', $sql) === 1;
-
     $id = pathinfo($path, PATHINFO_FILENAME);
     $id = preg_replace('/[^a-zA-Z0-9_-]+/', '-', $id) ?: $id;
 
@@ -92,7 +85,6 @@ function parse_view_file(string $path): ?array {
         'label' => $label,
         'description' => $description,
         'group_by' => $groupBy,
-        'group_actions' => $groupActions,
         'hide_columns' => $hideColumns,
         'path' => $path,
         'sql' => $sql,

@@ -42,14 +42,14 @@ function render_table_tools(int $rowCount): void {
     <?php
 }
 
-function render_dashboard_table(array $rows, array $columns, array $ctx, string $groupBy = '', bool $groupActions = false): void {
+function render_dashboard_table(array $rows, array $columns, array $ctx, string $groupBy = ''): void {
     // The group value travels as a row attribute rather than being read back out
     // of a rendered cell, so the grouping column does not have to be displayed.
     $grouped = $groupBy !== '' && $rows !== [] && array_key_exists($groupBy, $rows[0]);
 
     ?>
             <div class="table-wrap">
-                <table id="dashboard-table"<?= $grouped ? ' data-grouped="1"' : '' ?><?= $grouped && $groupActions ? ' data-group-actions="1"' : '' ?>>
+                <table id="dashboard-table"<?= $grouped ? ' data-grouped="1"' : '' ?>>
                     <thead>
                     <tr>
                         <th class="actions-col" data-sortable="0">Actions</th>

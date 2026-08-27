@@ -566,10 +566,9 @@
     // Without it, isGrouped stays false and every function below behaves exactly
     // as it did before grouping existed.
     const isGrouped = table.dataset.grouped === '1';
-    // Only set when the view also declares "-- group-actions: true", meaning every
-    // row in a group shares one action target and the buttons belong on the header.
-    const hoistActions = isGrouped && table.dataset.groupActions === '1';
     const collapsedGroups = new Set();
+    // Decided once from the data, see detectHoistedActions().
+    let hoistActions = false;
 
     function dataRows() {
         return Array.from(tbody.querySelectorAll('tr')).filter(row => !row.classList.contains('group-row'));
@@ -577,6 +576,52 @@
 
     function groupValue(row) {
         return row.dataset.group || '';
+    }
+
+    function actionsMarkup(row) {
+        return (row.querySelector('.actions-col')?.innerHTML || '').trim();
+    }
+
+    /**
+     * Decides whether the row actions belong on the group header instead of on
+     * every row, without the view having to say so.
+     *
+     * Grouping by host puts rows that all target that one host in a group, so
+     * their action buttons are identical and repeating them on each row is noise.
+     * Grouping by something like a network segment puts several different hosts
+     * in one group, and each row then needs its own buttons.
+     *
+     * Identical actions across every multi-row group is exactly that difference.
+     * Groups of one carry no evidence either way, so they are skipped for the
+     * decision but still follow it, which keeps one view looking consistent.
+     */
+    function detectHoistedActions() {
+        const groups = new Map();
+
+        for (const row of dataRows()) {
+            const value = groupValue(row);
+            if (!groups.has(value)) {
+                groups.set(value, []);
+            }
+            groups.get(value).push(row);
+        }
+
+        let decided = false;
+
+        for (const rows of groups.values()) {
+            if (rows.length < 2) {
+                continue;
+            }
+
+            decided = true;
+            const first = actionsMarkup(rows[0]);
+
+            if (rows.some(row => actionsMarkup(row) !== first)) {
+                return false;
+            }
+        }
+
+        return decided;
     }
 
     function visibleRows() {
@@ -646,10 +691,7 @@
                 // Copied, never moved: this runs again after every sort, and the row
                 // that happens to be first changes. The data rows keep their own
                 // buttons in the DOM and CSS hides them instead.
-                const source = row.querySelector('.actions-col');
-                if (source) {
-                    actionsCell.innerHTML = source.innerHTML;
-                }
+                actionsCell.innerHTML = actionsMarkup(row);
             }
 
             groupRow.appendChild(actionsCell);
@@ -812,6 +854,10 @@
         for (const row of initial) {
             tbody.appendChild(row);
         }
+
+        hoistActions = detectHoistedActions();
+        table.classList.toggle('has-group-actions', hoistActions);
+
         buildGroupRows();
     }
 

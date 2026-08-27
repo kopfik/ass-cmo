@@ -992,10 +992,12 @@ th.sort-desc::after {
 
 /* ── Collapsible groups (views declaring "-- group-by: column") ── */
 
-/* With "-- group-actions: true" the buttons live on the group header. The data
-   rows keep their own copies in the DOM so sorting can rebuild the header from
-   whichever row ends up first; only their contents are hidden. */
-table[data-group-actions="1"] tbody tr:not(.group-row) .actions-col > * {
+/* Set by the script when every multi-row group turned out to have identical row
+   actions, meaning the group key is the action target and repeating the buttons
+   on each row is noise. The data rows keep their own copies in the DOM so sorting
+   can rebuild the header from whichever row ends up first; only their contents
+   are hidden. */
+table.has-group-actions tbody tr:not(.group-row) .actions-col > * {
     display: none;
 }
 
