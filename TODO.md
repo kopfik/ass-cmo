@@ -603,6 +603,40 @@ Suggested wording:
 
 ---
 
+## Example dashboard views: reconcile with the ones actually in use
+
+**Do this together with the `0.9.0` tag work.**
+
+The example views in `config.example/dashboard-views/` have drifted from the ones running on the private instances. Several examples are not used by anyone, including the maintainer, because they were reworked locally and the changes never came back. The plan is to copy the local versions into the repository first, then go through them in one pass and make them behave consistently wherever consistency makes sense, and land that as a single commit.
+
+- [ ] `cleanup` Copy the in-use views from the private instances into `config.example/dashboard-views/`, then reconcile all of them in one pass.
+- [ ] `bug` Apply the Proxmox kernel-pool fix everywhere the same pattern appears. `30-proxmox-overview.sql` keyed its `kernel_stats` pool on the full `os_name`, which carries the patch level: `Proxmox VE 9.2.4` and `Proxmox VE 9.2.11` became separate pools, so a group of hosts all running the same old kernel were each the newest thing they were compared against and reported `🟢 OK`. Fixed there in `0.9.0` by keying on a derived `os_product` (product name without version) instead. `20-linux-overview.sql` uses the same `DISTINCT ON (os_name, ...)` shape and has the same latent defect for any distribution whose `PRETTY_NAME` carries a point release — Debian is safe (`Debian GNU/Linux 13 (trixie)` is identical across 13.x), but `Ubuntu 24.04.1 LTS` and `Ubuntu 24.04.2 LTS` would split. The fix there is less mechanical than in the Proxmox view, because `os_name` also separates unrelated distributions inside the `linux` fallback family, so dropping it from the key would pool them together.
+- [x] `decision` Proxmox VE, Backup Server, Mail Gateway and Datacenter Manager keep one kernel pool each and are never merged. They run `-pve` kernels, but each is its own operating system with its own release cadence, so a kernel that is current for one is not evidence about another. Merging them would mark every host of a lagging product permanently out of date. Decided by the maintainer, August 2026.
+- [ ] `cleanup` Views copied from one another have picked up comments that do not belong to them, for example the note about Docker published ports appearing in overviews that have no ports column. Strip those while reconciling.
+- [ ] `cleanup` `-- group-actions: true` is a leftover from the first grouping implementation and no longer does anything; the table decides where the action buttons belong from the data. Remove it from any view that still carries it.
+
+---
+
+## Read-only dashboard access for non-admins
+
+**Planned for `0.9.2`, after the `0.9.0` tag and the `0.9.1` Windows agent.**
+
+Goal: let a developer or other non-admin colleague see selected dashboard views (Docker overview first, possibly a reduced General overview) without giving them the admin dashboard, and without building application login and user accounts first.
+
+- [ ] `feature` Second read-only dashboard instance, separated by deployment rather than by application logic.
+  - A separate `php` service in `compose.yml` pointed at its own `ASSCMO_DASHBOARD_VIEWS_DIR`, plus a separate nginx server block on its own hostname. The views directory is the natural filter: it drives both the sidebar and the accepted `?view=` values, and the default view becomes whatever is in that directory.
+  - **The views directory alone is not enough.** `app/public/index.php` injects the `enrollment`, `agent-auth` and `revoked-agents` views into the view list in code, independently of the directory, so a second instance would still serve the revoke and enrollment screens and their POST actions. The read-only server block must therefore also refuse `POST` outright (every mutating action in the app is a CSRF-protected POST, so one rule makes the instance read-only by construction) and return 404 for those three `?view=` values.
+  - The read-only server block does not need the `/agents/` allowlist, `/scripts/`, `/inventory.php` or `/enroll.php` that the admin block carries, so it ends up shorter than the existing one.
+  - Do not pass `ASSCMO_ENROLLMENT_PEPPER` or `ASSCMO_ENROLLMENT_APPROVE_TOKEN` to the read-only container. They are only read inside the admin view branches, which that instance never reaches.
+  - The separate views directory can hold *different* SQL, not copies: dropping `ip` and `notes` from a view removes its launcher buttons entirely, since `row_actions()` returns nothing without an address. That is the knob for deciding how much a given audience sees.
+  - Add source-IP allowlisting, HTTP basic auth, or both to the read-only server block. Neither touches application code.
+  - Operator prerequisite, not automated by the installer: a TLS certificate for the second hostname, either its own or a SAN on the existing one.
+- [ ] `docs` Document in `SECURITY.md` what this boundary is and is not. It is separation by deployment: anyone who reaches the admin hostname still has full control, so that hostname must stay behind its existing allowlist. The read-only instance still exposes whatever its views select, so "sees only Docker" is only as true as that SQL makes it.
+
+This is deliberately not a replacement for application login and user accounts, which remain the right long-term answer. It is a clean way to defer them: once real roles exist, a read-only instance becomes one role rather than something to dismantle.
+
+---
+
 ## Docker container inventory
 
 Shipped in `0.9.0`: Linux agent collection, `docker_containers` table, ingest with 90-day retention, and the `70-docker-overview` / `80-docker-cleanup` example views. Remaining work:

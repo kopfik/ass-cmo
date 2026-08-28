@@ -5,6 +5,18 @@ WITH normalized AS (
     SELECT
         i.*,
         'proxmox' AS os_family,
+        -- Product without its version. The full os_name carries the patch level
+        -- ("Proxmox VE 9.2.4" vs "Proxmox VE 9.2.11"), so keying the kernel pool
+        -- on it splits one product into a pool per patch release and every host
+        -- ends up being the newest thing it is compared against.
+        CASE
+            WHEN i.os_name ILIKE '%proxmox backup server%' THEN 'Proxmox Backup Server'
+            WHEN i.os_name ILIKE '%proxmox mail gateway%' THEN 'Proxmox Mail Gateway'
+            WHEN i.os_name ILIKE '%proxmox datacenter manager%' THEN 'Proxmox Datacenter Manager'
+            WHEN i.os_name ILIKE '%proxmox virtual environment%'
+                 OR i.os_name ILIKE '%proxmox ve%' THEN 'Proxmox VE'
+            ELSE 'Proxmox'
+        END AS os_product,
         COALESCE(
             substring(i.os_name::text, 'Proxmox VE ([0-9]+)'),
             substring(i.os_name::text, 'Proxmox Virtual Environment ([0-9]+)'),
@@ -31,15 +43,15 @@ WITH normalized AS (
        OR i.kernel_version LIKE '%-pve'
 ),
 kernel_stats AS (
-    SELECT DISTINCT ON (os_name, os_family, os_major, kernel_track)
-        os_name,
+    SELECT DISTINCT ON (os_product, os_family, os_major, kernel_track)
+        os_product,
         os_family,
         os_major,
         kernel_track,
         kernel_version AS latest_known,
         kernel_sort_key AS latest_sort_key
     FROM normalized
-    ORDER BY os_name, os_family, os_major, kernel_track, kernel_sort_key DESC, system_upgrade_time DESC NULLS LAST, inventory_update_time DESC NULLS LAST
+    ORDER BY os_product, os_family, os_major, kernel_track, kernel_sort_key DESC, system_upgrade_time DESC NULLS LAST, inventory_update_time DESC NULLS LAST
 )
 SELECT
     n.hostname,
@@ -66,7 +78,7 @@ SELECT
     notes
 FROM normalized n
 JOIN kernel_stats ks
-    ON ks.os_name = n.os_name
+    ON ks.os_product = n.os_product
    AND ks.os_family = n.os_family
    AND ks.os_major = n.os_major
    AND ks.kernel_track = n.kernel_track
