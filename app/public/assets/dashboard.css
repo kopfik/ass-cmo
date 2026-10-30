@@ -652,6 +652,25 @@ body {
     height: auto;
 }
 
+/* Optional header-dark.* logo (see branding.php): shown instead of the
+   regular logo on the dark themes. */
+.brand-logo-dark,
+:root[data-theme="dark"] .brand-logo-light,
+:root[data-theme="midnight"] .brand-logo-light,
+:root[data-theme="dust-dark"] .brand-logo-light,
+:root[data-theme="rose-pine-moon"] .brand-logo-light,
+:root[data-theme="rose-pine"] .brand-logo-light {
+    display: none;
+}
+
+:root[data-theme="dark"] .brand-logo-dark,
+:root[data-theme="midnight"] .brand-logo-dark,
+:root[data-theme="dust-dark"] .brand-logo-dark,
+:root[data-theme="rose-pine-moon"] .brand-logo-dark,
+:root[data-theme="rose-pine"] .brand-logo-dark {
+    display: block;
+}
+
 .title {
     font-size: 28px;
     font-weight: 800;

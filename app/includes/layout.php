@@ -23,11 +23,11 @@ function render_head(string $title, array $ctx): void {
 }
 
 function render_brand(array $ctx): void {
-    $logoUrl = branding_header_logo_url();
+    $logoHtml = branding_header_logo_html('ASS-CMO');
     ?>
     <aside class="brand">
-        <?php if ($logoUrl !== null): ?>
-            <img class="brand-logo" src="<?= h($logoUrl) ?>" alt="ASS-CMO">
+        <?php if ($logoHtml !== ''): ?>
+            <?= $logoHtml ?>
         <?php else: ?>
             <div class="title">ASS-CMO</div>
         <?php endif; ?>
