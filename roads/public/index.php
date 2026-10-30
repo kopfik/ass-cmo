@@ -60,14 +60,14 @@ $logoUrl = branding_header_logo_url();
 
 // ── Render ───────────────────────────────────────────────────────────────────
 
-render_head('ass-roads', $ctx);
+render_head('ASS-ROADS', $ctx);
 ?>
 <div class="app app-v2 roads">
     <aside class="brand">
         <?php if ($logoUrl !== null): ?>
-            <img class="brand-logo" src="<?= h($logoUrl) ?>" alt="ass-roads">
+            <img class="brand-logo" src="<?= h($logoUrl) ?>" alt="ASS-ROADS">
         <?php else: ?>
-            <div class="title">ass-roads</div>
+            <div class="title">ASS-ROADS</div>
         <?php endif; ?>
         <div class="subtitle">Connection crossroads</div>
         <div class="instance"><?= h($ctx['instance']) ?></div>
