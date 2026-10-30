@@ -77,6 +77,11 @@ function parse_view_file(string $path): ?array {
         }
     }
 
+    // Optional "-- roads-toggle: yes" header adds ON/OFF buttons at the end of
+    // each row that set the "roads" flag in the host's tags. The view has to
+    // select uid, tags and notes for it.
+    $roadsToggle = preg_match('/^\s*--\s*roads-toggle:\s*yes\s*$/mi', $sql) === 1;
+
     $id = pathinfo($path, PATHINFO_FILENAME);
     $id = preg_replace('/[^a-zA-Z0-9_-]+/', '-', $id) ?: $id;
 
@@ -86,6 +91,7 @@ function parse_view_file(string $path): ?array {
         'description' => $description,
         'group_by' => $groupBy,
         'hide_columns' => $hideColumns,
+        'roads_toggle' => $roadsToggle,
         'path' => $path,
         'sql' => $sql,
     ];

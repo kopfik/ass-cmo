@@ -330,7 +330,11 @@ curl -s -o /dev/null -w '%{http_code}\n' https://ass-roads.example.com/
 
 `200` means nginx, the container and the database role work. `502` means nginx cannot reach `ass-roads-php`: check that the container runs and that the `resolver 127.0.0.11` line in `location = /` is in place. The page itself reports a database error when the password in `roads/.env` does not match the role.
 
-**Which hosts are listed.** A host appears when its `notes` contain a web link (a `Label: https://...` line), or when its `tags` contain `"roads": true`. `"roads": false` hides a host even if it has a web link. Only the web link lines of `notes` reach ass-roads. Until the admin dashboard can toggle this, set the tag in Adminer or with SQL; it is merged into the existing tags and shows on the next page load:
+**Which hosts are listed.** A host appears when its `notes` contain a web link (a `Label: https://...` line), or when its `tags` contain `"roads": true`. `"roads": false` hides a host even if it has a web link. Only the web link lines of `notes` reach ass-roads.
+
+The ON/OFF buttons at the end of each row in the General overview set this flag. Both grey means no flag (the web link rule decides; an outlined ON means the host is listed through a link), green ON is `"roads": true`, red OFF is `"roads": false`. A click on a lit button greys it again. The buttons need `-- roads-toggle: yes` in the view header and `uid`, `notes` and `tags` in its `SELECT`, as in `config.example/dashboard-views/10-general-overview.sql`. An existing instance keeps its own copy in `config.local/dashboard-views/`, so add the two header lines and the `uid` column there.
+
+The flag can also be set with SQL; it is merged into the existing tags and shows on the next page load:
 
 ```bash
 sudo docker exec ass-postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "UPDATE inventory SET tags = coalesce(tags, '\''{}'\''::jsonb) || '\''{\"roads\": false}'\''::jsonb WHERE hostname = '\''example-host'\''"'

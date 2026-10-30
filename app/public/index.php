@@ -40,6 +40,25 @@ function dashboard_admin_actor(): string {
     return $remoteAddr !== '' ? 'dashboard-ui ' . $remoteAddr : 'dashboard-ui';
 }
 
+/**
+ * Sets the ass-roads flag of one host: 'on' stores "roads": true, 'off' stores
+ * "roads": false, 'auto' removes the key so the roads_hosts view falls back to
+ * the web link rule. Other tags are left as they are. Returns false when no
+ * inventory row has that UID.
+ */
+function roads_set_flag(PDO $pdo, string $uid, string $state): bool {
+    $newTags = match ($state) {
+        'on'  => "coalesce(tags, '{}'::jsonb) || '{\"roads\": true}'::jsonb",
+        'off' => "coalesce(tags, '{}'::jsonb) || '{\"roads\": false}'::jsonb",
+        default => "coalesce(tags, '{}'::jsonb) - 'roads'",
+    };
+
+    $stmt = $pdo->prepare("UPDATE inventory SET tags = {$newTags} WHERE uid = :uid");
+    $stmt->execute([':uid' => $uid]);
+
+    return $stmt->rowCount() > 0;
+}
+
 function render_enrollment_main(array $rows, string $error, ?array $flash, string $csrfToken, ?int $highlightId): void {
     ?>
     <?php if ($flash !== null): ?>
@@ -329,6 +348,7 @@ $currentView = $selectedId !== null ? $views[$selectedId] : null;
 $isEnrollment = $selectedId === 'enrollment';
 $isAgentAuth = $selectedId === 'agent-auth';
 $isRevokedAgents = $selectedId === 'revoked-agents';
+$hasRoadsToggle = !empty($currentView['roads_toggle']);
 
 // ── Data loading ─────────────────────────────────────────────────────────────
 
@@ -344,7 +364,9 @@ $csrfToken          = '';
 $flashMessage       = null;
 $highlightRequestId = isset($_GET['request_id']) ? (int)$_GET['request_id'] : null;
 
-if ($isEnrollment || $isAgentAuth || $isRevokedAgents) {
+// Session and CSRF token for every page with a write action. Kept apart from
+// the admin view block below, whose elseif chain loads the SQL views.
+if ($isEnrollment || $isAgentAuth || $isRevokedAgents || $hasRoadsToggle) {
     if (session_status() === PHP_SESSION_NONE) {
         $isHttps = (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off')
             || (isset($_SERVER['SERVER_PORT']) && (string)$_SERVER['SERVER_PORT'] === '443');
@@ -359,7 +381,45 @@ if ($isEnrollment || $isAgentAuth || $isRevokedAgents) {
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
     }
     $csrfToken = (string)$_SESSION['csrf_token'];
+}
 
+// ON/OFF buttons of a "-- roads-toggle: yes" view. Called by dashboard.js in
+// the background, so it answers JSON instead of redirecting.
+if ($hasRoadsToggle && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['roads_state'])) {
+    header('Content-Type: application/json');
+
+    $postedCsrf  = (string)($_POST['csrf_token'] ?? '');
+    $postedUid   = trim((string)($_POST['uid'] ?? ''));
+    $postedState = (string)$_POST['roads_state'];
+    $roadsError  = '';
+
+    if (!hash_equals($csrfToken, $postedCsrf)) {
+        $roadsError = 'Invalid CSRF token. Reload the page.';
+    } elseif ($postedUid === '' || !preg_match('/^[A-Za-z0-9._:@-]{1,64}$/', $postedUid)) {
+        $roadsError = 'Invalid UID.';
+    } elseif (!in_array($postedState, ['on', 'off', 'auto'], true)) {
+        $roadsError = 'Invalid state.';
+    } else {
+        try {
+            if (!roads_set_flag(enrollment_admin_pdo(), $postedUid, $postedState)) {
+                $roadsError = 'Host not found in inventory.';
+            }
+        } catch (Throwable $e) {
+            error_log('ASS-CMO roads toggle UI: ' . $e->getMessage());
+            $roadsError = 'Saving failed. Check server logs.';
+        }
+    }
+
+    if ($roadsError !== '') {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'error' => $roadsError]);
+    } else {
+        echo json_encode(['ok' => true, 'state' => $postedState]);
+    }
+    exit;
+}
+
+if ($isEnrollment || $isAgentAuth || $isRevokedAgents) {
     if (isset($_SESSION['enrollment_flash'])) {
         $flashMessage = $_SESSION['enrollment_flash'];
         unset($_SESSION['enrollment_flash']);
@@ -648,7 +708,7 @@ render_head('ASS-CMO Dashboard', $ctx);
             <div class="empty">No rows returned.</div>
         <?php else: ?>
             <?php render_table_tools(count($rows)); ?>
-            <?php render_dashboard_table($rows, $columns, $ctx, $viewGroupBy); ?>
+            <?php render_dashboard_table($rows, $columns, $ctx, $viewGroupBy, $hasRoadsToggle ? $csrfToken : ''); ?>
         <?php endif; ?>
     </main>
 </div>

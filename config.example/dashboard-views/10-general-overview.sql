@@ -1,5 +1,7 @@
 -- label: General overview
 -- description: Basic inventory overview ordered by upgrade age and hostname.
+-- hide-columns: uid
+-- roads-toggle: yes
 
 SELECT
     hostname,
@@ -21,6 +23,7 @@ SELECT
     cpu_cores AS cores,
     ram_gb AS ram,
     date_trunc('second', inventory_update_time AT TIME ZONE 'Europe/Prague') AS last_seen,
+    uid,
     notes,
     tags
 FROM inventory

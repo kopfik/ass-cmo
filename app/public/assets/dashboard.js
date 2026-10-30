@@ -861,5 +861,52 @@
         buildGroupRows();
     }
 
+    // ON/OFF buttons of a "-- roads-toggle: yes" view. A click on a grey button
+    // lights it and greys the other one; a click on a lit button greys it again,
+    // which removes the flag ('auto'). Saved in the background, so the scroll
+    // position and the filter stay; reverted when saving fails.
+    const roadsCsrf = table.dataset.roadsCsrf || '';
+
+    if (roadsCsrf !== '') {
+        tbody.addEventListener('click', event => {
+            const button = event.target.closest('[data-roads-set]');
+            const toggle = button ? button.closest('.roads-toggle') : null;
+            if (!toggle || toggle.classList.contains('is-saving')) {
+                return;
+            }
+
+            const previous = toggle.dataset.state || 'auto';
+            const clicked = button.dataset.roadsSet;
+            const next = previous === clicked ? 'auto' : clicked;
+
+            toggle.dataset.state = next;
+            toggle.classList.add('is-saving');
+
+            const body = new URLSearchParams({
+                csrf_token: roadsCsrf,
+                uid: toggle.dataset.uid || '',
+                roads_state: next,
+            });
+
+            fetch(window.location.href, {
+                method: 'POST',
+                body,
+                credentials: 'same-origin',
+                headers: { Accept: 'application/json' },
+            })
+                .then(response => response.json().catch(() => ({ ok: false, error: `HTTP ${response.status}` })))
+                .then(result => {
+                    if (!result.ok) {
+                        throw new Error(result.error || 'Saving failed.');
+                    }
+                })
+                .catch(error => {
+                    toggle.dataset.state = previous;
+                    window.alert(`Roads flag not saved: ${error.message}`);
+                })
+                .finally(() => toggle.classList.remove('is-saving'));
+        });
+    }
+
     applyFilter();
 })();
