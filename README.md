@@ -46,6 +46,7 @@ The long-term idea is to grow into a practical replacement for tools such as PuT
 - Docker container overview and cleanup dashboard views (Linux agents).
 - Theme switcher and PWA metadata.
 - SSH / RDP / application action buttons and `assssh://` / `assrdp://` URI handler installers for Linux and Windows.
+- Optional ass-roads companion page: a read-only host list with connection buttons for all employees, backed by a database role that can read a single view. See [INSTALL.md](INSTALL.md#optional-ass-roads-companion-page).
 
 ## How it works
 
@@ -98,7 +99,7 @@ v0.5.x  first installable and usable ASS-CMO version
 v0.6.x  dashboard and launcher refinements
 v0.7.x  internal releases and hotfixes
 v0.8.0  secure enrollment, per-host secrets, revocation, and clean public release
-v0.9.0  Docker container inventory and Docker dashboard views
+v0.9.0  Docker container inventory, Docker dashboard views, ass-roads companion page
 v1.0.0  later stable release
 ```
 

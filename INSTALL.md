@@ -16,8 +16,9 @@ For the security model and exposure guidance, see **[SECURITY.md](SECURITY.md)**
 7. [Where configuration lives](#where-configuration-lives)
 8. [Agent enrollment](#agent-enrollment)
 9. [Client URI handlers](#client-uri-handlers)
-10. [Updates](#updates)
-11. [Backup](#backup)
+10. [Optional: ass-roads companion page](#optional-ass-roads-companion-page)
+11. [Updates](#updates)
+12. [Backup](#backup)
 
 ---
 
@@ -276,6 +277,66 @@ ASSCMO_DASHBOARD_SSH_USER=root
 After changing this value, recreate the PHP container as shown in [Where configuration lives](#where-configuration-lives).
 
 If handler links do not open, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+
+---
+
+## Optional: ass-roads companion page
+
+ass-roads is a single read-only page for all employees: action buttons, hostname and IP of selected hosts, plus the URI handler install commands. The admin dashboard stays with administrators. ass-roads lives in `roads/`, runs as its own container next to a running ASS-CMO stack, and is served by the existing `ass-nginx` under its own hostname. The installer does not set it up; the steps below are manual. Run them from the repository root.
+
+**1. Database view and role.** `database/scripts/003_roads_readonly_user.sql` creates the `roads_hosts` view and the `ass_roads` role, which can read only that view. This generates a password, prints it for step 2 and applies the script:
+
+```bash
+P=$(openssl rand -base64 32); echo "ROADS_DB_PASSWORD=$P"; sudo docker exec -i -e RP="$P" ass-postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -v roads_user=ass_roads -v roads_password="'\''$RP'\''"' < database/scripts/003_roads_readonly_user.sql
+```
+
+The script is idempotent. When re-running it later (for example after an update changes the view), pass the existing password from `roads/.env` instead of generating a new one, or ass-roads loses its database connection:
+
+```bash
+P=$(grep '^ROADS_DB_PASSWORD=' roads/.env | cut -d= -f2-); sudo docker exec -i -e RP="$P" ass-postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -v roads_user=ass_roads -v roads_password="'\''$RP'\''"' < database/scripts/003_roads_readonly_user.sql
+```
+
+**2. Configuration.** `roads/.env` is separate from `config.local/.env` and is not committed:
+
+```bash
+cp roads/.env.example roads/.env
+```
+
+Fill in `ROADS_DB_PASSWORD` from step 1, and `ROADS_INSTANCE_NAME` and `ROADS_BASE_URL` with the ass-roads hostname (for example `ass-roads.example.com`). The handler install commands shown on the page download from `ROADS_BASE_URL`.
+
+**3. Container.** It joins the existing `ass-net` network and publishes no ports:
+
+```bash
+cd roads && sudo docker compose up -d --build && cd ..
+```
+
+**4. nginx.** Copy the example server block, adjust the lines marked `changeme` (hostname and the TLS snippet, the same certificate setup as the admin server block) and enable it. `config.local/nginx` is mounted into the container as `/etc/nginx`, so the `sites-enabled` symlink must be relative:
+
+```bash
+cp roads/nginx/ass-roads.example config.local/nginx/sites-available/ass-roads.example.com
+ln -s ../sites-available/ass-roads.example.com config.local/nginx/sites-enabled/ass-roads.example.com
+sudo docker exec ass-nginx nginx -t && sudo docker exec ass-nginx nginx -s reload
+```
+
+The block includes `snippets/allowlist.conf`. For a company-wide page it has to cover every network employees connect from; comment it out only if the page is reachable from trusted networks alone. An optional basic auth lock is included in the block, commented out; the password file goes to `config.local/nginx/htpasswd-roads`.
+
+The hostname needs a DNS record pointing to the ASS-CMO server, and the TLS certificate has to cover it (a wildcard certificate does).
+
+**5. Verify.**
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' https://ass-roads.example.com/
+```
+
+`200` means nginx, the container and the database role work. `502` means nginx cannot reach `ass-roads-php`: check that the container runs and that the `resolver 127.0.0.11` line in `location = /` is in place. The page itself reports a database error when the password in `roads/.env` does not match the role.
+
+**Which hosts are listed.** A host appears when its `notes` contain a web link (a `Label: https://...` line), or when its `tags` contain `"roads": true`. `"roads": false` hides a host even if it has a web link. Only the web link lines of `notes` reach ass-roads. Until the admin dashboard can toggle this, set the tag in Adminer or with SQL; it is merged into the existing tags and shows on the next page load:
+
+```bash
+sudo docker exec ass-postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "UPDATE inventory SET tags = coalesce(tags, '\''{}'\''::jsonb) || '\''{\"roads\": false}'\''::jsonb WHERE hostname = '\''example-host'\''"'
+```
+
+Agent scans do not overwrite `tags` or `notes`. Deleting a host's inventory record (for example on revoke) removes its tags too.
 
 ---
 

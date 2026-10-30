@@ -84,6 +84,7 @@ Agent enrollment uses a two-phase flow: the installer initiates a pending reques
 - Inventory payload schema validation needs continued hardening.
 - Docker container mount paths and published ports are stored in the inventory database and are visible to anyone with dashboard access.
 - Adminer exposure must be controlled in production deployments.
+- Anyone who can open the ass-roads page sees the hostnames, IP addresses and web links of the hosts it lists.
 
 ## Deployment exposure model
 
@@ -115,3 +116,13 @@ Expected properties of the dashboard role:
 - it cannot insert, update, delete, create tables, alter schema, grant privileges, or manage roles.
 
 Operators should verify this boundary on their own deployment by confirming that the dashboard role can run read-only inventory queries, such as `SELECT count(*) FROM inventory`, but cannot create tables or otherwise modify the `public` schema.
+
+## ass-roads boundary
+
+ass-roads (`roads/`) is meant for a wider audience than the admin dashboard, so it is built with less to expose:
+
+- Its database role (`ass_roads` by default, created by `database/scripts/003_roads_readonly_user.sql`) has `SELECT` on the `roads_hosts` view only. It has no grant on `inventory`, `agent_auth` or any other table. The view is the security boundary: whatever SQL ass-roads runs, it cannot read more than the view selects.
+- The view exposes `hostname`, `ip` and only the web link lines of `notes`. Other note lines, including `ssh_user`, and all other inventory columns stay private to the admin dashboard.
+- Which hosts are listed is decided by the view: hosts with a web link in `notes` or with `"roads": true` in `tags`, minus hosts with `"roads": false`. Review the listed hosts before opening the page to employees; a web link added to a host's notes later makes that host visible on ass-roads.
+- The page has no admin views, no forms and no writes. The example nginx block (`roads/nginx/ass-roads.example`) answers only `GET` and `HEAD`, and serves the URI handler installers but no agent installers.
+- The container publishes no ports and is reachable only through `ass-nginx`. The example block includes `allowlist.conf` and an optional basic auth lock. ass-roads is still an internal page: keep it on the private network or behind the same kind of protection as the admin dashboard.
