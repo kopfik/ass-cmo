@@ -1293,15 +1293,12 @@ button.action {
     gap: 4px;
 }
 
+/* Size and shape come from the shared compact pill block, like .action. */
 .roads-toggle button {
     appearance: none;
     -webkit-appearance: none;
     font: inherit;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 3px 7px;
     border: 1px solid var(--line);
-    border-radius: 6px;
     cursor: pointer;
     background: var(--table-head);
     color: var(--table-muted);
@@ -1443,6 +1440,7 @@ button.action {
 .app-v2 .action,
 .command-launcher-badge,
 .app-v2 .copy-command-button,
+.app-v2 .roads-toggle button,
 .about-modal .action {
     display: inline-flex;
     align-items: center;
