@@ -43,7 +43,8 @@ if ($user === '' || $pass === '') {
     }
 }
 
-$columns = visible_table_columns($rows, ['notes', 'tags']);
+// os_name only selects RDP or SSH in the action buttons.
+$columns = visible_table_columns($rows, ['notes', 'tags', 'os_name']);
 
 $handlerCommands = [];
 try {

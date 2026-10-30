@@ -23,6 +23,8 @@ CREATE VIEW roads_hosts AS
 SELECT
     i.hostname,
     i.primary_ipv4_addr AS ip,
+    -- Not displayed; picks RDP instead of SSH for Windows hosts.
+    i.os_name,
     links.notes
 FROM inventory i
 CROSS JOIN LATERAL (
