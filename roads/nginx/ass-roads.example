@@ -24,11 +24,6 @@ server {
     include snippets/ssl-params.conf;
     include snippets/allowlist.conf;                   # <--- review: must cover every employee network
 
-    # Optional username/password lock, off by default.
-    # Create the file with: htpasswd -c config.local/nginx/htpasswd-roads <username>
-    # auth_basic "ass-roads";
-    # auth_basic_user_file /etc/nginx/htpasswd-roads;
-
     # ass-roads is read-only: it has no forms and accepts no writes.
     if ($request_method !~ ^(GET|HEAD)$) {
         return 405;
@@ -42,6 +37,13 @@ server {
     root /var/www/html;
 
     location = / {
+        # Optional username/password lock for the page, off by default.
+        # Create the file with: htpasswd -c config.local/nginx/htpasswd-roads <username>
+        # Set here, not at server level, so the handler installers below stay
+        # downloadable with curl, which has no password.
+        # auth_basic "ass-roads";
+        # auth_basic_user_file /etc/nginx/htpasswd-roads;
+
         # Docker DNS. Set here, not at server level, so it does not clash with
         # a resolver already set in ssl-params.conf.
         resolver 127.0.0.11 valid=30s;

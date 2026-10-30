@@ -23,13 +23,14 @@ function render_head(string $title, array $ctx): void {
 }
 
 function render_brand(array $ctx): void {
-    $logoHtml = branding_header_logo_html('ASS-CMO');
+    $title = (string)($ctx['title'] ?? '') ?: 'ASS-CMO';
+    $logoHtml = branding_header_logo_html($title);
     ?>
     <aside class="brand">
         <?php if ($logoHtml !== ''): ?>
             <?= $logoHtml ?>
         <?php else: ?>
-            <div class="title">ASS-CMO</div>
+            <div class="title"><?= h($title) ?></div>
         <?php endif; ?>
         <div class="subtitle">Admins Secure Server Connection Manager &amp; Overview</div>
         <div class="instance"><?= h($ctx['instance']) ?></div>

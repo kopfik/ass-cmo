@@ -60,6 +60,8 @@ function app_context(): array {
 
     return [
         'instance' => $instance,
+        // Optional page name (ASSCMO_TITLE); empty keeps the default ASS-CMO naming.
+        'title' => trim(envv('ASSCMO_TITLE', '')),
         'base_url' => $baseUrl,
         'adminer_url' => app_adminer_url($instance),
         'views_dir' => envv('ASSCMO_DASHBOARD_VIEWS_DIR', '/app/dashboard-views'),

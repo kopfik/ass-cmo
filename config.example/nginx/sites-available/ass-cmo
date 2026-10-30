@@ -168,6 +168,13 @@ server {
     }
 
     location ~ \.php$ {
+        # Optional username/password lock for the dashboard, off by default.
+        # Create the file with: htpasswd -c config.local/nginx/htpasswd-ass-cmo <username>
+        # Set here, not at server level: agents have no password, and /inventory.php,
+        # /enroll.php and /agents/ (their own locations above) must stay reachable.
+        # auth_basic "ass-cmo";
+        # auth_basic_user_file /etc/nginx/htpasswd-ass-cmo;
+
         try_files $uri =404;
         fastcgi_split_path_info ^(.+\.php)(/.+)$;
 

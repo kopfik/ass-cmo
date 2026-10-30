@@ -163,6 +163,8 @@ config.local/backups/             local backups
 
 The root `.env` is a symlink to `config.local/.env` for Docker Compose compatibility.
 
+The page name in the browser tab and in the header (when there is no custom logo) can be changed with `ASSCMO_TITLE`; empty keeps "ASS-CMO".
+
 After changing values that the PHP container reads (for example a default SSH user), recreate the container:
 
 ```bash
@@ -302,7 +304,7 @@ P=$(grep '^ROADS_DB_PASSWORD=' roads/.env | cut -d= -f2-); sudo docker exec -i -
 cp roads/.env.example roads/.env
 ```
 
-Fill in `ROADS_DB_PASSWORD` from step 1, and `ROADS_INSTANCE_NAME` and `ROADS_BASE_URL` with the ass-roads hostname (for example `ass-roads.example.com`). The handler install commands shown on the page download from `ROADS_BASE_URL`.
+Fill in `ROADS_DB_PASSWORD` from step 1, and `ROADS_INSTANCE_NAME` and `ROADS_BASE_URL` with the ass-roads hostname (for example `ass-roads.example.com`). Optionally set `ROADS_TITLE`, the page name in the browser tab and in the header when there is no custom logo (default `ASS-ROADS`). The handler install commands shown on the page download from `ROADS_BASE_URL`.
 
 **3. Container.** It joins the existing `ass-net` network and publishes no ports:
 

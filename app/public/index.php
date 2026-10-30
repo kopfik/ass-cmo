@@ -682,7 +682,7 @@ $topMetaRenderer = $isEnrollment
 
 // ── Render ───────────────────────────────────────────────────────────────────
 
-render_head('ASS-CMO Dashboard', $ctx);
+render_head((string)$ctx['title'] !== '' ? (string)$ctx['title'] : 'ASS-CMO Dashboard', $ctx);
 ?>
 <div class="app app-v2">
     <?php render_brand($ctx); ?>

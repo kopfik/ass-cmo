@@ -56,18 +56,19 @@ try {
     error_log('ass-roads: handler commands unavailable: ' . $e->getMessage());
 }
 
-$logoHtml = branding_header_logo_html('ASS-ROADS');
+$title = envv('ROADS_TITLE', 'ASS-ROADS');
+$logoHtml = branding_header_logo_html($title);
 
 // ── Render ───────────────────────────────────────────────────────────────────
 
-render_head('ASS-ROADS', $ctx);
+render_head($title, $ctx);
 ?>
 <div class="app app-v2 roads">
     <aside class="brand">
         <?php if ($logoHtml !== ''): ?>
             <?= $logoHtml ?>
         <?php else: ?>
-            <div class="title">ASS-ROADS</div>
+            <div class="title"><?= h($title) ?></div>
         <?php endif; ?>
         <div class="subtitle">Connection crossroads</div>
         <div class="instance"><?= h($ctx['instance']) ?></div>
