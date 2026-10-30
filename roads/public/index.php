@@ -103,6 +103,17 @@ render_head('ass-roads', $ctx);
             <div class="empty">No hosts listed.</div>
         <?php else: ?>
             <?php render_table_tools(count($rows)); ?>
+            <?php // One header per column of the multi-column layout; hidden on narrow windows. ?>
+            <div class="roads-head" aria-hidden="true">
+                <?php for ($i = 0; $i < 3; $i++): ?>
+                    <div class="roads-head-group">
+                        <span>Actions</span>
+                        <?php foreach ($columns as $col): ?>
+                            <span><?= h(display_column_label((string)$col)) ?></span>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endfor; ?>
+            </div>
             <?php render_dashboard_table($rows, $columns, $ctx); ?>
         <?php endif; ?>
     </main>

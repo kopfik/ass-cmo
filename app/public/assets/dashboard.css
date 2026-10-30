@@ -1009,11 +1009,56 @@ tr.group-row td {
 }
 
 /* ── ass-roads: multi-column host list ──
-   On a wide window the rows flow into up to three columns, top to bottom and
+   On a wide window the rows flow into two or three columns, top to bottom and
    then across, like a phone book. Rows stay table rows in the DOM, so the
-   filter and the command launcher keep working. The header is hidden, since
-   it would only sit above the first column. */
+   filter and the command launcher keep working. CSS columns cannot repeat the
+   table header, so the page renders .roads-head with one header per column
+   and the real thead is hidden. */
+.roads-head {
+    display: none;
+}
+
 @media (min-width: 1500px) {
+    .roads .table-wrap {
+        background: none;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+        overflow: visible;
+    }
+
+    .roads-head {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        column-gap: 16px;
+    }
+
+    .roads-head-group:nth-child(3) {
+        display: none;
+    }
+
+    .roads-head-group,
+    .roads #dashboard-table tr {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 9rem 8.5rem;
+        align-items: center;
+    }
+
+    .roads-head-group {
+        background: var(--table-head);
+        border: 1px solid var(--line);
+        border-radius: 10px 10px 0 0;
+    }
+
+    .roads-head-group span {
+        padding: 9px 10px;
+        font-size: 12px;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--table-text);
+    }
+
     .roads #dashboard-table,
     .roads #dashboard-table tbody {
         display: block;
@@ -1024,17 +1069,15 @@ tr.group-row td {
     }
 
     .roads #dashboard-table tbody {
-        columns: 560px 3;
-        column-gap: 0;
-        column-rule: 1px solid var(--line);
+        columns: 2;
+        column-gap: 16px;
     }
 
     .roads #dashboard-table tr {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) 9rem 8.5rem;
-        align-items: center;
         break-inside: avoid;
-        border-bottom: 1px solid var(--line);
+        background: var(--table-bg);
+        border: 1px solid var(--line);
+        border-top: 0;
     }
 
     .roads #dashboard-table td {
@@ -1047,6 +1090,20 @@ tr.group-row td {
         position: static;
         min-width: 0;
         white-space: normal;
+    }
+}
+
+@media (min-width: 1900px) {
+    .roads-head {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .roads-head-group:nth-child(3) {
+        display: grid;
+    }
+
+    .roads #dashboard-table tbody {
+        columns: 3;
     }
 }
 
