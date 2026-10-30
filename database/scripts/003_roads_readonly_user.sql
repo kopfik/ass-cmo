@@ -15,11 +15,14 @@
 -- Only the web link lines of notes are exposed. Other note lines, including
 -- ssh_user, stay private to the admin dashboard.
 
-CREATE OR REPLACE VIEW roads_hosts AS
+-- Dropped and recreated, because CREATE OR REPLACE VIEW cannot remove columns.
+-- The grant below is applied again on every run.
+DROP VIEW IF EXISTS roads_hosts;
+
+CREATE VIEW roads_hosts AS
 SELECT
     i.hostname,
     i.primary_ipv4_addr AS ip,
-    i.os_name,
     links.notes
 FROM inventory i
 CROSS JOIN LATERAL (

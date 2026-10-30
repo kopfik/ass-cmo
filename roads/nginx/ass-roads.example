@@ -36,13 +36,15 @@ server {
 
     # Resolve the container at request time, so the ASS-CMO nginx still starts
     # when ass-roads is not running. ass-roads then answers 502 on its own.
-    resolver 127.0.0.11 valid=30s;
     set $roads_php ass-roads-php:9000;
 
     # ASS-CMO public directory; only /assets/ is served from it.
     root /var/www/html;
 
     location = / {
+        # Docker DNS. Set here, not at server level, so it does not clash with
+        # a resolver already set in ssl-params.conf.
+        resolver 127.0.0.11 valid=30s;
         fastcgi_pass $roads_php;
         include fastcgi_params;
         fastcgi_param SCRIPT_FILENAME /var/www/html/index.php;
