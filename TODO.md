@@ -617,23 +617,31 @@ The example views in `config.example/dashboard-views/` have drifted from the one
 
 ---
 
-## Read-only dashboard access for non-admins
+## ass-roads: company-wide connection crossroads
 
-**Planned for `0.9.2`, after the `0.9.0` tag and the `0.9.1` Windows agent.**
+**Planned for `0.9.2`, after the `0.9.1` Windows agent. Replaces the earlier plan for a second read-only instance of the admin dashboard.**
 
-Goal: let a developer or other non-admin colleague see selected dashboard views (Docker overview first, possibly a reduced General overview) without giving them the admin dashboard, and without building application login and user accounts first.
+Goal: one simple page for all employees (developers first) listing selected hosts with their action buttons, hostname and IP, while the ASS-CMO admin dashboard stays admin-only. Decided by the maintainer, October 2026.
 
-- [ ] `feature` Second read-only dashboard instance, separated by deployment rather than by application logic.
-  - A separate `php` service in `compose.yml` pointed at its own `ASSCMO_DASHBOARD_VIEWS_DIR`, plus a separate nginx server block on its own hostname. The views directory is the natural filter: it drives both the sidebar and the accepted `?view=` values, and the default view becomes whatever is in that directory.
-  - **The views directory alone is not enough.** `app/public/index.php` injects the `enrollment`, `agent-auth` and `revoked-agents` views into the view list in code, independently of the directory, so a second instance would still serve the revoke and enrollment screens and their POST actions. The read-only server block must therefore also refuse `POST` outright (every mutating action in the app is a CSRF-protected POST, so one rule makes the instance read-only by construction) and return 404 for those three `?view=` values.
-  - The read-only server block does not need the `/agents/` allowlist, `/scripts/`, `/inventory.php` or `/enroll.php` that the admin block carries, so it ends up shorter than the existing one.
-  - Do not pass `ASSCMO_ENROLLMENT_PEPPER` or `ASSCMO_ENROLLMENT_APPROVE_TOKEN` to the read-only container. They are only read inside the admin view branches, which that instance never reaches.
-  - The separate views directory can hold *different* SQL, not copies: dropping `ip` and `notes` from a view removes its launcher buttons entirely, since `row_actions()` returns nothing without an address. That is the knob for deciding how much a given audience sees.
-  - Add source-IP allowlisting, HTTP basic auth, or both to the read-only server block. Neither touches application code.
-  - Operator prerequisite, not automated by the installer: a TLS certificate for the second hostname, either its own or a SAN on the existing one.
-- [ ] `docs` Document in `SECURITY.md` what this boundary is and is not. It is separation by deployment: anyone who reaches the admin hostname still has full control, so that hostname must stay behind its existing allowlist. The read-only instance still exposes whatever its views select, so "sees only Docker" is only as true as that SQL makes it.
+Why a separate companion app instead of a second instance of the admin app: `app/public/index.php` injects the `enrollment`, `agent-auth` and `revoked-agents` views in code, so a second instance would have to block them one by one. ass-roads simply does not contain them.
 
-This is deliberately not a replacement for application login and user accounts, which remain the right long-term answer. It is a clean way to defer them: once real roles exist, a read-only instance becomes one role rather than something to dismantle.
+Design:
+
+- Lives in `roads/` inside this repository, with its own `compose.yml`. It is not functional on its own: it requires a running ASS-CMO stack and joins the existing external `ass-net` network to reach `postgres`. It does not change how ASS-CMO itself runs.
+- One page, no forms, no POST, no writes.
+- Reuses `app/includes/actions.php` (mounted read-only) for the SSH / RDP / web buttons, so buttons behave exactly like in the admin dashboard. Raw `notes` are never displayed, only the buttons derived from them.
+- Own PostgreSQL role with `SELECT` on a single database view (e.g. `roads_hosts`), not on the tables. The view is the security boundary: whatever SQL ass-roads runs, it cannot read more than that view selects.
+- Host selection in that view: a host is shown when its `notes` contain a web link, or when `tags` contains `"roads": true`; `"roads": false` hides a host that would otherwise be shown. The agent ingest does not touch `tags`, so the flag survives scans. It does not survive a revoke that deletes the inventory row.
+- Publishes no ports. The existing `ass-nginx` gets an extra server block for the ass-roads hostname that proxies to the ass-roads container, so TLS stays in one place. The repository ships only an example with `ass-roads.example.com`; real hostnames stay in `config.local/`.
+- Serves the URI handler installers from `agents/handlers/` itself, so employees can install handlers without reaching the admin hostname.
+
+- [ ] `feature` `roads/` companion app: compose file and a single page. The page runs `SELECT * FROM roads_hosts`, so the view alone decides which hosts and columns are shown.
+- [ ] `feature` `database/scripts/` script creating the `roads_hosts` view and the ass-roads read-only role.
+- [ ] `feature` Example nginx server block for the ass-roads hostname in `roads/nginx/ass-roads.example` (kept out of `config.example/nginx/` so the installer does not copy it into fresh installs).
+- [ ] `feature` Optional HTTP basic auth (`htpasswd`) example for both the ass-roads and the admin server blocks. Off by default. No application code; this is the simple username/password lock until real application login exists (see Application login / access control).
+- [ ] `feature` Admin dashboard: roads on/off toggle per host, so the `roads` tag does not have to be edited in Adminer for every host. CSRF-protected POST like the other admin actions; consider a bulk toggle for many hosts at once.
+- [ ] `docs` Document in `SECURITY.md` what this boundary is and is not: ass-roads exposes exactly what `roads_hosts` selects, and the list of hostnames and IPs is a map of the network for anyone who can reach it.
+- [ ] `docs` INSTALL / README section for ass-roads.
 
 ---
 

@@ -1,0 +1,90 @@
+# ass-roads server block for the ASS-CMO nginx.
+# Copy to config.local/nginx/sites-available/ass-roads, adjust the lines marked
+# changeme, symlink it from sites-enabled/ and reload the ASS-CMO nginx.
+#
+# The page itself runs in the ass-roads-php container (roads/compose.yml).
+# Static assets, branding and handler installers are served from the files the
+# ASS-CMO nginx already mounts.
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ass-roads.example.com;                 # <--- changeme
+
+    include snippets/redirect.conf;
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name ass-roads.example.com;                 # <--- changeme
+
+    include snippets/ssl-example.com.conf;             # <--- changeme
+    include snippets/ssl-params.conf;
+    include snippets/allowlist.conf;                   # <--- review: must cover every employee network
+
+    # Optional username/password lock, off by default.
+    # Create the file with: htpasswd -c config.local/nginx/htpasswd-roads <username>
+    # auth_basic "ass-roads";
+    # auth_basic_user_file /etc/nginx/htpasswd-roads;
+
+    # ass-roads is read-only: it has no forms and accepts no writes.
+    if ($request_method !~ ^(GET|HEAD)$) {
+        return 405;
+    }
+
+    # Resolve the container at request time, so the ASS-CMO nginx still starts
+    # when ass-roads is not running. ass-roads then answers 502 on its own.
+    resolver 127.0.0.11 valid=30s;
+    set $roads_php ass-roads-php:9000;
+
+    # ASS-CMO public directory; only /assets/ is served from it.
+    root /var/www/html;
+
+    location = / {
+        fastcgi_pass $roads_php;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME /var/www/html/index.php;
+    }
+
+    location /assets/ {
+        try_files $uri =404;
+    }
+
+    location /branding/ {
+        alias /var/www/branding/;
+        autoindex off;
+        try_files $uri =404;
+    }
+
+    # URI handler installers only. Agent installers are not offered here.
+    location = /agents/handlers/linux/install-ass-cmo-uri-handlers.sh {
+        alias /var/www/agents/handlers/linux/install-ass-cmo-uri-handlers.sh;
+        default_type text/plain;
+    }
+
+    location = /agents/handlers/linux/bundled/assrdp-handler {
+        alias /var/www/agents/handlers/linux/bundled/assrdp-handler;
+        default_type text/plain;
+    }
+
+    location = /agents/handlers/linux/bundled/assssh-handler {
+        alias /var/www/agents/handlers/linux/bundled/assssh-handler;
+        default_type text/plain;
+    }
+
+    location = /agents/handlers/linux/bundled/assweb-handler {
+        alias /var/www/agents/handlers/linux/bundled/assweb-handler;
+        default_type text/plain;
+    }
+
+    location = /agents/handlers/windows/install-ass-cmo-uri-handlers.ps1 {
+        alias /var/www/agents/handlers/windows/install-ass-cmo-uri-handlers.ps1;
+        default_type text/plain;
+    }
+
+    location / {
+        return 404;
+    }
+}

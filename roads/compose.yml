@@ -1,0 +1,33 @@
+name: ass-roads
+
+# ass-roads is a companion page to ASS-CMO, not a standalone application.
+# It needs a running ASS-CMO stack: it joins the existing ass-net network to
+# reach postgres, and the ASS-CMO nginx serves it through its own server block
+# (see nginx/ass-roads.example). It publishes no ports itself.
+
+networks:
+  ass-net:
+    external: true
+    name: ass-net
+
+services:
+  roads-php:
+    build: ../docker/php
+    container_name: ass-roads-php
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-inventory_db}
+      ROADS_DB_USER: ${ROADS_DB_USER:-ass_roads}
+      ROADS_DB_PASSWORD: ${ROADS_DB_PASSWORD:-}
+      ASSCMO_INSTANCE_NAME: ${ROADS_INSTANCE_NAME}
+      ASSCMO_BASE_URL: ${ROADS_BASE_URL:-}
+      ASSCMO_ASSWEB_PROTOCOL: ${ROADS_ASSWEB_PROTOCOL:-false}
+    volumes:
+      - ./public:/var/www/html:ro
+      - ../app/includes:/app/includes:ro
+      - ../meta:/app/meta:ro
+      - ../config.local/branding:/app/branding:ro
+    networks:
+      - ass-net
