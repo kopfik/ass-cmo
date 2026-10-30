@@ -61,7 +61,7 @@ $logoUrl = branding_header_logo_url();
 
 render_head('ass-roads', $ctx);
 ?>
-<div class="app app-v2">
+<div class="app app-v2 roads">
     <aside class="brand">
         <?php if ($logoUrl !== null): ?>
             <img class="brand-logo" src="<?= h($logoUrl) ?>" alt="ass-roads">

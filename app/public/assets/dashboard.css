@@ -1008,6 +1008,48 @@ tr.group-row td {
     left: 0;
 }
 
+/* ── ass-roads: multi-column host list ──
+   On a wide window the rows flow into up to three columns, top to bottom and
+   then across, like a phone book. Rows stay table rows in the DOM, so the
+   filter and the command launcher keep working. The header is hidden, since
+   it would only sit above the first column. */
+@media (min-width: 1500px) {
+    .roads #dashboard-table,
+    .roads #dashboard-table tbody {
+        display: block;
+    }
+
+    .roads #dashboard-table thead {
+        display: none;
+    }
+
+    .roads #dashboard-table tbody {
+        columns: 560px 3;
+        column-gap: 0;
+        column-rule: 1px solid var(--line);
+    }
+
+    .roads #dashboard-table tr {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 9rem 8.5rem;
+        align-items: center;
+        break-inside: avoid;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .roads #dashboard-table td {
+        border-bottom: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .roads #dashboard-table .actions-col {
+        position: static;
+        min-width: 0;
+        white-space: normal;
+    }
+}
+
 tr.group-row:hover td {
     background: var(--table-head-hover);
 }
