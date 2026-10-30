@@ -20,6 +20,7 @@
 - The ASS-CMO page name is configurable the same way with `ASSCMO_TITLE` in `config.local/.env`. Empty or unset keeps the current naming (tab "ASS-CMO Dashboard", header "ASS-CMO"); a value is used for both the browser tab and the header when there is no custom logo.
 
 ### Fixed
+- `INSTALL.md` "Updates" now says that `git pull` and `docker compose up -d` do not update PHP: the PHP image keeps the patch release it was built with until it is rebuilt with `docker compose build --pull`. It also covers updating ass-roads and that `config.local/` copies of example views and nginx blocks are never updated by a pull.
 - Dashboard assets are cache-busted by file modification time again. `dashboard.css` and `theme.js` were versioned by the application version, which does not change when an asset is edited within a release, so browsers kept a stale copy; `theme.js` had no cache-busting at all. `dashboard.js` did intend to use the modification time, but read it from `/app/public/assets/`, a path that does not exist in the PHP container — `compose.yml` mounts `app/public` at `/var/www/html` — so it silently fell back to the application version too. All three now go through one `asset_version()` helper that resolves the file in either layout.
 
 ## v0.9.0

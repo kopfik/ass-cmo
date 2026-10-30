@@ -603,9 +603,21 @@ Suggested wording:
 
 ---
 
+## v0.9.0 release plan
+
+`meta/VERSION` already says `0.9.0`, but the tag does not exist yet; everything since lives under `## Unreleased` in `CHANGELOG.md`. Decided in October 2026 to put the remaining work into this one tag instead of `0.9.1` / `0.9.2`. Order:
+
+- [x] ass-roads companion page and the admin ON/OFF toggle (see ass-roads section).
+- [ ] Windows agent Docker support (see Docker container inventory). Agent `VERSION` bump only for the agent that changes.
+- [ ] Reconcile example dashboard views (next section).
+- [ ] External multi-AI review of the `Unreleased` diff; verify every claim against the code.
+- [ ] Merge `## Unreleased` into `## v0.9.0` in `CHANGELOG.md`, then `git tag -a v0.9.0 -m "ASS-CMO v0.9.0"`.
+
+---
+
 ## Example dashboard views: reconcile with the ones actually in use
 
-**Do this together with the `0.9.0` tag work.**
+**Do this together with the `0.9.0` tag work.** `10-general-overview.sql` is partly done: the stale-host `❌` marker, the `disk` column and the roads toggle came back from the instances in October 2026. The work instance additionally groups it by `network_segment`, which stays local.
 
 The example views in `config.example/dashboard-views/` have drifted from the ones running on the private instances. Several examples are not used by anyone, including the maintainer, because they were reworked locally and the changes never came back. The plan is to copy the local versions into the repository first, then go through them in one pass and make them behave consistently wherever consistency makes sense, and land that as a single commit.
 
@@ -619,7 +631,7 @@ The example views in `config.example/dashboard-views/` have drifted from the one
 
 ## ass-roads: company-wide connection crossroads
 
-**Planned for `0.9.2`, after the `0.9.1` Windows agent. Replaces the earlier plan for a second read-only instance of the admin dashboard.**
+**Shipped under `Unreleased`, going into `0.9.0` (the earlier plan of `0.9.1` Windows agent / `0.9.2` ass-roads was dropped in October 2026: everything goes into one `0.9.0` tag). Running on both private instances. Replaces the earlier plan for a second read-only instance of the admin dashboard.**
 
 Goal: one simple page for all employees (developers first) listing selected hosts with their action buttons, hostname and IP, while the ASS-CMO admin dashboard stays admin-only. Decided by the maintainer, October 2026.
 
@@ -635,13 +647,16 @@ Design:
 - Publishes no ports. The existing `ass-nginx` gets an extra server block for the ass-roads hostname that proxies to the ass-roads container, so TLS stays in one place. The repository ships only an example with `ass-roads.example.com`; real hostnames stay in `config.local/`.
 - Serves the URI handler installers from `agents/handlers/` itself, so employees can install handlers without reaching the admin hostname.
 
-- [ ] `feature` `roads/` companion app: compose file and a single page. The page runs `SELECT * FROM roads_hosts`, so the view alone decides which hosts and columns are shown.
-- [ ] `feature` `database/scripts/` script creating the `roads_hosts` view and the ass-roads read-only role.
-- [ ] `feature` Example nginx server block for the ass-roads hostname in `roads/nginx/ass-roads.example` (kept out of `config.example/nginx/` so the installer does not copy it into fresh installs).
-- [ ] `feature` Optional HTTP basic auth (`htpasswd`) example for both the ass-roads and the admin server blocks. Off by default. No application code; this is the simple username/password lock until real application login exists (see Application login / access control).
-- [ ] `feature` Admin dashboard: roads on/off toggle per host, so the `roads` tag does not have to be edited in Adminer for every host. CSRF-protected POST like the other admin actions; consider a bulk toggle for many hosts at once.
-- [ ] `docs` Document in `SECURITY.md` what this boundary is and is not: ass-roads exposes exactly what `roads_hosts` selects, and the list of hostnames and IPs is a map of the network for anyone who can reach it.
-- [ ] `docs` INSTALL / README section for ass-roads.
+- [x] `feature` `roads/` companion app: compose file and a single page. The page runs `SELECT * FROM roads_hosts`, so the view alone decides which hosts and columns are shown. On wide windows the list flows into two or three side-by-side tables.
+- [x] `feature` `database/scripts/003_roads_readonly_user.sql` creating the `roads_hosts` view (`hostname`, `ip`, hidden `os_name` for the RDP/SSH choice, web link lines of `notes`) and the ass-roads read-only role.
+- [x] `feature` Example nginx server block in `roads/nginx/ass-roads.example` (kept out of `config.example/nginx/` so the installer does not copy it into fresh installs). The Docker `resolver` sits inside `location = /`, because a server-level one clashes with a `resolver` already set in `ssl-params.conf`.
+- [x] `feature` Optional HTTP basic auth example for both the ass-roads and the admin server blocks, commented out. Scoped to the dashboard PHP location and the roads page, never server level: a server-level lock answers `401` to agents on `/inventory.php` and `/enroll.php` and to `curl` handler installs, and the dashboard keeps working, so it goes unnoticed. Found on the work instance in October 2026.
+- [x] `feature` Admin dashboard: ON/OFF toggle per host (`-- roads-toggle: yes` view header), CSRF-protected background POST, admin DB user, touches only the `roads` key of one host's `tags`.
+- [ ] `later` Bulk ON/OFF for many hosts at once. For now: filter the overview, then click through. Add only if that turns out to be too slow in practice.
+- [x] `feature` Configurable page names: `ROADS_TITLE` (roads) and `ASSCMO_TITLE` (admin dashboard).
+- [x] `docs` `SECURITY.md` "ass-roads boundary" section and known-risk entry.
+- [x] `docs` INSTALL section "Optional: ass-roads companion page" (verified end to end on both instances) and README feature line.
+- [ ] `later` The installer does not set up ass-roads; it stays a manual, documented procedure. Revisit only if a second operator asks for it.
 
 ---
 
@@ -649,7 +664,7 @@ Design:
 
 Shipped in `0.9.0`: Linux agent collection, `docker_containers` table, ingest with 90-day retention, and the `70-docker-overview` / `80-docker-cleanup` example views. Remaining work:
 
-- [ ] `feature` Windows agent Docker support. The payload contract is OS-agnostic, so this is agent-side only: `agents/windows/ass-cmo-agent.ps1` already detects Docker for `docker_installed`/`docker_version` but does not build `docker_containers`. It has no `jq`, so the payload has to be assembled with PowerShell objects instead.
+- [ ] `feature` Windows agent Docker support, planned for `0.9.0` (see v0.9.0 release plan). The payload contract is OS-agnostic, so this is agent-side only: `agents/windows/ass-cmo-agent.ps1` already detects Docker for `docker_installed`/`docker_version` but does not build `docker_containers`. It has no `jq`, so the payload has to be assembled with PowerShell objects instead.
 - [x] `feature` Grouped/collapsible dashboard tables, opted into per view with a `-- group-by: <column>` header. Implemented as client-side grouping in `app/public/assets/dashboard.js`, so it works for any view, not just the Docker ones. The rejected alternative was a dedicated PHP branch in `index.php` alongside `$isEnrollment` / `$isAgentAuth` / `$isRevokedAgents`: much more code, and it would only ever serve one view.
 - [ ] `later` Consider a `--print` dry-run flag for the Linux agent that builds the payload and prints it without sending. Useful when verifying a manual agent install before a version bump rolls it out fleet-wide.
 - [ ] `docs` Add a Docker overview screenshot to `docs/images/dashboard/` and reference it in `README.md`, alongside the existing general and Linux overview screenshots.
@@ -660,8 +675,10 @@ Shipped in `0.9.0`: Linux agent collection, `docker_containers` table, ingest wi
 
 _(This section is about the ASS-CMO stack's own containers, not the Docker inventory feature above.)_
 
-- [ ] `hardening` Pin Adminer image version instead of using `latest`.
-- [ ] `hardening` Add PostgreSQL healthcheck.
+- [x] `hardening` Pin Adminer image version instead of using `latest` (`adminer:5`).
+- [x] `hardening` Add PostgreSQL healthcheck (PHP waits for `service_healthy`).
+- [x] `docs` INSTALL "Updates": `git pull` + `up -d` does not update PHP; rebuild with `docker compose build --pull` for PHP security fixes (ass-roads too). Found in October 2026 when the work instance still ran PHP 8.5.7 after CVE-2026-109618 / CVE-2026-109619 (fixed in 8.5.12).
+- [ ] `docs` Upgrade note for older instances: the work instance's `config.local/nginx/sites-available/ass-cmo` predated the enrollment feature and had no `location = /enroll.php` block, which only surfaced when basic auth was added. Consider a TROUBLESHOOTING entry that compares an instance's nginx block against `config.example/nginx/sites-available/ass-cmo`.
 - [ ] `hardening` Ensure PHP/nginx startup handles PostgreSQL not being ready yet.
 - [ ] `docs` Document which compose profiles are production-like and which are lab/demo only.
 

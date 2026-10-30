@@ -355,6 +355,20 @@ git pull
 sudo docker compose up -d
 ```
 
+This does not update PHP. The PHP container is built once from `docker/php/Dockerfile` (`php:8.5-fpm-alpine`) and keeps the PHP patch release it was built with. To pick up PHP security fixes, and newer `postgres`, `adminer` and `nginx` images, rebuild against the latest base images:
+
+```bash
+sudo docker compose pull && sudo docker compose build --pull && sudo docker compose up -d
+```
+
+If ass-roads is installed, rebuild its container the same way, and re-run `database/scripts/003_roads_readonly_user.sql` with the existing password when the update changed that script (see [Optional: ass-roads companion page](#optional-ass-roads-companion-page)):
+
+```bash
+cd roads && sudo docker compose build --pull && sudo docker compose up -d && cd ..
+```
+
+`git pull` also never touches `config.local/`. Changes to the example dashboard views (`config.example/dashboard-views/`) or the example nginx blocks (`config.example/nginx/`) reach an existing instance only when they are copied into its `config.local/` copies by hand; `CHANGELOG.md` says when that is needed.
+
 Linux agents are re-run automatically after package transactions through the apt or pacman hook. The apt hook is non-blocking and does not break package upgrades if the ASS-CMO server is unavailable. To update an agent's files explicitly, re-run the agent installer one-liner on the managed host.
 
 There is no server-driven automatic agent updater: agent updates are operator-triggered by rerunning the installer/update command. A secure automatic updater is intentionally deferred until an integrity/signature, rollback, and trust-boundary design is in place.
