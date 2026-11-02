@@ -223,6 +223,10 @@ systemctl daemon-reload
 
 ### Windows agent
 
+The Windows agent installer requires Windows PowerShell 5.1. Windows 10 / Server 2016 and newer include it. Windows Server 2012 and 2012 R2 ship with PowerShell 3.0 / 4.0: install Windows Management Framework (WMF) 5.1 first. On older PowerShell the installer fails after the enrollment is approved, which leaves an approved host that never reports; see [Enrollment troubleshooting](TROUBLESHOOTING.md#enrollment-troubleshooting).
+
+Check the version with `$PSVersionTable.PSVersion`.
+
 Run PowerShell as Administrator (replace the hostname):
 
 ```powershell

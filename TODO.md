@@ -243,6 +243,10 @@ UX direction: the installer initiates enrollment and the pairing code appears on
   - Notes/tags must not be repurposed as a launcher configuration language.
   - Launch links should preserve stable host identity and a safe fallback host/user/port.
   - The concrete login/user-preference/per-admin launcher-mapping implementation is intentionally undecided for now.
+- [ ] `later` SMB share links for file servers (`\\host\share` on Windows, `smb://host/share` on Linux). A plain link does not work: browsers block `file://` / UNC navigation from http(s) pages, Windows has no `smb://` handler, and Notes links intentionally allow only `http://` / `https://`. This needs a new URI scheme (for example `asssmb://`) handled like `assssh://` / `assrdp://`.
+  - Windows handler opens `explorer.exe \\host\share`; Linux handler uses `xdg-open smb://host/share`.
+  - Server side: generate the action in `app/includes/actions.php` with the same host validation, plus share-name validation; extend the scheme allowlist in `dashboard.js`, the handler installers, and `agents/handlers/tests/test-malicious-uri-targets.sh`.
+  - Undecided: which hosts get the action and where the share name comes from (for example a `smb:` key in notes like `ssh_user:`, or a bare `\\host\` link that lists shares).
 - [ ] `later` Move dashboard version checks toward DB-backed reference data. Design note only, no schema/implementation decided.
   - Hold expected ASS-CMO/app/agent/helper versions once in a simple ASS-CMO-owned versions table.
   - Hold inventory-derived platform/kernel versions in a separate observed-versions table, if they can be safely normalized.

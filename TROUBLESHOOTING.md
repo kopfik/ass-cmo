@@ -145,6 +145,7 @@ Dashboard SQL view execution requires the read-only dashboard credentials to be 
 - Enrollment requests appear in the dashboard under `?view=enrollment`. Compare the pairing code shown on the managed host console with the one shown in the admin UI before approving.
 - A request can be denied; denied requests are retained as an audit trail with a stored reason and are not deleted.
 - If a UID already has an active `agent_auth` entry, a new approval is automatically rejected and the pending request is denied with a stored reason. Inspect the `agent_enrollment_requests` and `agent_auth` tables in Adminer to confirm.
+- Approved but never reported: if the installer fails after approval (for example on Windows PowerShell older than 5.1), the host has an active `agent_auth` entry but no inventory row. It is missing from the overviews, and every new enrollment for it is denied as `UID is already enrolled`. To recover, open **Revoke agents** (`?view=agent-auth`). The entry has no hostname there, so searching by host name does not find it: type `date` into the filter to sort by creation time (newest first), then find the card titled with the UID and showing `Last inventory: —`, and revoke it. Re-run the installer and approve the new request; the revoked entry is archived automatically on approval. No manual database edits are needed.
 - The one-time agent secret is delivered exactly once to the installer after approval. If it is not collected before the request expires, re-run enrollment on the managed host.
 
 ---
